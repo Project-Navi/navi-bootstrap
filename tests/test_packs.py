@@ -75,6 +75,7 @@ class TestResolvePack:
             "quality-gates",
             "release-pipeline",
             "review-system",
+            "scaffold",
             "security-scanning",
         }
         for name in expected:
@@ -93,13 +94,14 @@ class TestListPacks:
             "quality-gates",
             "release-pipeline",
             "review-system",
+            "scaffold",
             "security-scanning",
         }
         assert names == expected
 
     def test_returns_pack_info(self) -> None:
         packs = list_packs()
-        assert len(packs) == 7
+        assert len(packs) == 8
         for p in packs:
             assert isinstance(p, PackInfo)
             assert p.name
