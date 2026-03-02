@@ -12,6 +12,7 @@ build/
 .claude/
 .serena/
 grippy-data/
+.worktrees/
 
 # Internal docs — operational docs not for public tracking
 docs/internal/
