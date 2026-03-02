@@ -135,7 +135,8 @@ def plan(
                     )
                 )
         else:
-            render_plan.entries.append(RenderEntry(src=src, dest=dest, mode=mode))
+            resolved_dest = _render_dest_path(dest, {"spec": spec}) if "{{" in dest else dest
+            render_plan.entries.append(RenderEntry(src=src, dest=resolved_dest, mode=mode))
 
     return render_plan
 
