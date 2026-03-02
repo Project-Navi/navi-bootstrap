@@ -92,6 +92,19 @@ def list_packs() -> list[PackInfo]:
     return sorted(results, key=lambda p: p.name)
 
 
+PACK_ORDER: list[str] = ["scaffold", "base"]
+
+
+def get_ordered_packs(names: list[str] | None = None) -> list[Path]:
+    """Return pack directories in render order.
+
+    If *names* is ``None``, the default :data:`PACK_ORDER` is used.
+    Each name is resolved via :func:`resolve_pack`.
+    """
+    order = names if names is not None else PACK_ORDER
+    return [resolve_pack(name) for name in order]
+
+
 def _list_pack_dirs() -> list[Path]:
     """Return all pack directories from the bundled packs location."""
     packs_dir = bundled_packs_dir()

@@ -54,3 +54,62 @@ def load_spec(path: Path) -> dict[str, Any]:
         raise SpecError(f"Failed to parse spec JSON: {e}") from e
     validate_spec(spec)
     return cast(dict[str, Any], spec)
+
+
+def build_spec_for_new(
+    name: str,
+    *,
+    description: str = "",
+    license_id: str = "MIT",
+    python_version: str = "3.12",
+    author_name: str = "",
+) -> dict[str, Any]:
+    """Build a valid spec dict for a greenfield project from CLI arguments.
+
+    Constructs a complete spec without reading pyproject.toml or inspecting an
+    existing project.  The returned dict is validated against the JSON Schema
+    before being returned.
+
+    Args:
+        name: Project name (required, non-empty).
+        description: One-line project description.
+        license_id: SPDX license identifier (default ``"MIT"``).
+        python_version: Minimum Python version (default ``"3.12"``).
+        author_name: Author display name; omitted from spec when empty.
+
+    Returns:
+        A spec dict that passes :func:`validate_spec`.
+
+    Raises:
+        SpecError: If the constructed spec fails schema validation.
+    """
+    pkg_dir = name.replace("-", "_")
+
+    spec: dict[str, Any] = {
+        "name": name,
+        "version": "0.1.0",
+        "language": "python",
+        "python_version": python_version,
+        "description": description,
+        "structure": {
+            "src_dir": f"src/{pkg_dir}",
+            "test_dir": "tests",
+        },
+        "dependencies": {
+            "runtime": [],
+            "dev": ["pytest>=8.0", "ruff>=0.4", "mypy>=1.10"],
+        },
+        "features": {
+            "ci": True,
+            "pre_commit": True,
+        },
+    }
+
+    if license_id:
+        spec["license"] = license_id
+
+    if author_name:
+        spec["author"] = {"name": author_name}
+
+    validate_spec(spec)
+    return spec
