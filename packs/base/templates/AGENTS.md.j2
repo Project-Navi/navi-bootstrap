@@ -1,9 +1,16 @@
 {%- set pv = spec.python_version | default("3.12") -%}
 {%- set src = spec.structure.src_dir | default("src") if spec.structure is defined else "src" -%}
 {%- set tst = spec.structure.test_dir | default("tests") if spec.structure is defined else "tests" -%}
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to AI coding agents working with this repository.
+
+> **Why AGENTS.md instead of CLAUDE.md or .cursorrules?**
+> Agent-specific files (CLAUDE.md, .cursorrules, .github/copilot-instructions.md) are
+> better created by the agents themselves — they know their own capabilities and
+> instruction format. This file provides the universal project context that any agent needs.
+> If you are an AI agent, use this file as your baseline and create your own agent-specific
+> configuration file if your platform supports one.
 
 ## Project Overview
 

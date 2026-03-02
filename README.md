@@ -36,7 +36,7 @@ my-project/
 ├── .github/workflows/tests.yml
 ├── .github/dependabot.yml
 ├── .pre-commit-config.yaml
-├── CLAUDE.md
+├── AGENTS.md
 ├── DEBT.md
 └── nboot-spec.json
 ```
@@ -56,7 +56,7 @@ Eight template packs, layered with explicit dependencies:
 | Pack | What it generates |
 |------|-------------------|
 | **scaffold** | Project skeleton — pyproject.toml, src layout, tests, README, LICENSE, .gitignore |
-| **base** | CI workflows, pre-commit config, dependabot, tool config, CLAUDE.md, DEBT.md |
+| **base** | CI workflows, pre-commit config, dependabot, tool config, AGENTS.md, DEBT.md |
 | **security-scanning** | CodeQL analysis, OpenSSF Scorecard |
 | **github-templates** | Bug report, feature request, issue config, PR template |
 | **review-system** | Code review and security review workflows |

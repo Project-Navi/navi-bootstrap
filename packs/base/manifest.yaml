@@ -27,8 +27,8 @@ templates:
     dest: .github/dependabot.yml
   - src: workflows/tests.yml.j2
     dest: .github/workflows/tests.yml
-  - src: CLAUDE.md.j2
-    dest: CLAUDE.md
+  - src: AGENTS.md.j2
+    dest: AGENTS.md
   - src: DEBT.md.j2
     dest: DEBT.md
   - src: license-header.txt.j2

@@ -130,7 +130,7 @@ class TestFullPipeline:
         assert "Applied" in result.output
 
         # Verify key files were created
-        assert (realistic_project / "CLAUDE.md").exists()
+        assert (realistic_project / "AGENTS.md").exists()
         assert (realistic_project / "DEBT.md").exists()
 
     def test_diff_clean_after_apply(
@@ -201,7 +201,7 @@ class TestFullPipeline:
         )
 
         # Step 3: manually edit a rendered file
-        claude_md = realistic_project / "CLAUDE.md"
+        claude_md = realistic_project / "AGENTS.md"
         assert claude_md.exists()
         claude_md.write_text("# I manually changed this\n")
 
@@ -220,7 +220,7 @@ class TestFullPipeline:
             ],
         )
         assert result.exit_code == 1, f"diff should have found changes:\n{result.output}"
-        assert "CLAUDE.md" in result.output
+        assert "AGENTS.md" in result.output
 
     def test_rendered_files_contain_spec_values(
         self, runner: CliRunner, realistic_project: Path, base_pack: Path
@@ -242,8 +242,8 @@ class TestFullPipeline:
             ],
         )
 
-        # CLAUDE.md should reference the actual project name and paths
-        claude_md = (realistic_project / "CLAUDE.md").read_text()
+        # AGENTS.md should reference the actual project name and paths
+        claude_md = (realistic_project / "AGENTS.md").read_text()
         assert "my-project" in claude_md
         assert "src/my_project" in claude_md
         assert "tests/" in claude_md
@@ -320,7 +320,7 @@ class TestSanitizePlanRenderComposition:
         assert result.exit_code == 0
 
         # The name should be sanitized in output, not rendered as a template
-        claude_md = (target / "CLAUDE.md").read_text()
+        claude_md = (target / "AGENTS.md").read_text()
         assert "malicious" not in claude_md or "\\{\\{" in claude_md
 
 
@@ -376,7 +376,7 @@ class TestMultiPackComposition:
         _apply_pack(runner, spec_path, "github-templates", target)
 
         # Base files exist
-        assert (target / "CLAUDE.md").exists()
+        assert (target / "AGENTS.md").exists()
         # Elective files exist
         assert (target / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml").exists()
         assert (target / ".github" / "PULL_REQUEST_TEMPLATE.md").exists()
@@ -392,7 +392,7 @@ class TestMultiPackComposition:
         _apply_pack(runner, spec_path, "review-system", target)
 
         # All three pack outputs coexist
-        assert (target / "CLAUDE.md").exists()
+        assert (target / "AGENTS.md").exists()
         assert (target / ".github" / "workflows" / "codeql.yml").exists()
         assert (target / ".grippy.yaml").exists()
 
@@ -515,11 +515,11 @@ class TestGreenfieldRender:
             ],
         )
         assert result.exit_code == 0, f"render failed: {result.output}"
-        assert (out_dir / "CLAUDE.md").exists()
+        assert (out_dir / "AGENTS.md").exists()
         assert (out_dir / ".pre-commit-config.yaml").exists()
 
         # Verify content has real values
-        claude_md = (out_dir / "CLAUDE.md").read_text()
+        claude_md = (out_dir / "AGENTS.md").read_text()
         assert "integration-test" in claude_md
         assert "{{" not in claude_md
 
@@ -706,7 +706,7 @@ class TestDiffUnappliedPack:
             ],
         )
         assert result.exit_code == 1
-        assert "CLAUDE.md" in result.output
+        assert "AGENTS.md" in result.output
 
 
 class TestAllPacksSequential:
@@ -795,7 +795,7 @@ class TestGreenfieldVsApply:
         _apply_pack(runner, spec_path, "base", apply_dir)
 
         # Compare create-mode files (not append-mode like pyproject.toml)
-        for name in ["CLAUDE.md", "DEBT.md", ".github/dependabot.yml"]:
+        for name in ["AGENTS.md", "DEBT.md", ".github/dependabot.yml"]:
             render_file = render_dir / name
             apply_file = apply_dir / name
             if render_file.exists() and apply_file.exists():
@@ -806,7 +806,7 @@ class TestGreenfieldVsApply:
         spec_path = _make_spec(tmp_path)
         out_dir = tmp_path / "project"
         out_dir.mkdir()
-        (out_dir / "CLAUDE.md").write_text("# existing\n")
+        (out_dir / "AGENTS.md").write_text("# existing\n")
 
         result = runner.invoke(
             cli,
@@ -852,10 +852,10 @@ class TestSpecEdgeCases:
             ],
         )
         assert result.exit_code == 0, f"Minimal spec failed: {result.output}"
-        assert (target / "CLAUDE.md").exists()
+        assert (target / "AGENTS.md").exists()
 
         # Defaults should appear in rendered content
-        claude_md = (target / "CLAUDE.md").read_text()
+        claude_md = (target / "AGENTS.md").read_text()
         assert "minimal" in claude_md
         assert "3.12" in claude_md  # default python_version
 
@@ -877,7 +877,7 @@ class TestSpecEdgeCases:
         # pre_commit conditional template should NOT render
         assert not (target / ".pre-commit-config.yaml").exists()
         # Unconditional files should render
-        assert (target / "CLAUDE.md").exists()
+        assert (target / "AGENTS.md").exists()
         assert (target / "DEBT.md").exists()
 
     def test_extra_unknown_fields_pass_through(self, runner: CliRunner, tmp_path: Path) -> None:
@@ -896,7 +896,7 @@ class TestSpecEdgeCases:
         target.mkdir()
 
         _apply_pack(runner, spec_path, "base", target)
-        assert (target / "CLAUDE.md").exists()
+        assert (target / "AGENTS.md").exists()
         assert _diff_pack(runner, spec_path, "base", target) == 0
 
 
@@ -941,23 +941,23 @@ class TestManualEditReapply:
     """Manual edits to rendered files are overwritten on reapply."""
 
     def test_reapply_overwrites_manual_edit(self, runner: CliRunner, tmp_path: Path) -> None:
-        """Edit CLAUDE.md → reapply base → original content restored."""
+        """Edit AGENTS.md → reapply base → original content restored."""
         target = tmp_path / "project"
         target.mkdir()
         spec_path = _make_spec(tmp_path)
 
         _apply_pack(runner, spec_path, "base", target)
-        original = (target / "CLAUDE.md").read_text()
+        original = (target / "AGENTS.md").read_text()
 
         # Manual edit
-        (target / "CLAUDE.md").write_text("# Manually overwritten\n")
+        (target / "AGENTS.md").write_text("# Manually overwritten\n")
 
         # Diff should detect the change
         assert _diff_pack(runner, spec_path, "base", target) == 1
 
         # Reapply restores original
         _apply_pack(runner, spec_path, "base", target)
-        assert (target / "CLAUDE.md").read_text() == original
+        assert (target / "AGENTS.md").read_text() == original
 
     def test_reapply_restores_append_block_after_manual_edit(
         self, runner: CliRunner, tmp_path: Path
@@ -1069,7 +1069,7 @@ class TestDryRunComposition:
         assert result.exit_code == 0
         assert "Dry run" in result.output
         # Target should have no new files
-        assert not (target / "CLAUDE.md").exists()
+        assert not (target / "AGENTS.md").exists()
 
 
 class TestDockerConditional:

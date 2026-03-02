@@ -78,7 +78,7 @@ class TestBasePackManifest:
         srcs = [t["src"] for t in manifest["templates"]]
         assert "pre-commit-config.yaml.j2" in srcs
         assert "dependabot.yml.j2" in srcs
-        assert "CLAUDE.md.j2" in srcs
+        assert "AGENTS.md.j2" in srcs
         assert "DEBT.md.j2" in srcs
 
     def test_manifest_has_action_shas(self) -> None:
@@ -116,7 +116,7 @@ class TestBasePackRender:
         # Check key files exist
         assert (output_dir / ".pre-commit-config.yaml").exists()
         assert (output_dir / ".github" / "dependabot.yml").exists()
-        assert (output_dir / "CLAUDE.md").exists()
+        assert (output_dir / "AGENTS.md").exists()
         assert (output_dir / "DEBT.md").exists()
         assert (output_dir / ".github" / "workflows" / "tests.yml").exists()
 
@@ -242,7 +242,7 @@ class TestBasePackRender:
             action_shas=fake_shas,
             action_versions=fake_versions,
         )
-        claude_content = (output_dir / "CLAUDE.md").read_text()
+        claude_content = (output_dir / "AGENTS.md").read_text()
         assert "arctl" in claude_content
         assert "3.9" in claude_content
         assert "uv run pytest" in claude_content
