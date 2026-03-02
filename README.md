@@ -9,7 +9,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Spec-driven rendering engine and template packs. CI, security scanning, code review, release pipelines, quality gates — defined once as template packs, applied to any project with a single command.
+navi-bootstrap generates operational infrastructure for Python projects — CI, security scanning, code review, release pipelines, quality gates, and the project skeleton itself — from declarative template packs.
 
 ---
 
@@ -18,48 +18,65 @@ Spec-driven rendering engine and template packs. CI, security scanning, code rev
 ```bash
 pip install navi-bootstrap
 
-# Generate a spec by inspecting your project
-nboot init --target ./my-project
-
-# Preview what a pack would change
-nboot diff --spec nboot-spec.json --pack ./packs/base --target ./my-project
-
-# Apply packs to an existing project
-nboot apply --spec nboot-spec.json --pack ./packs/base --target ./my-project
-
-# Render a new project from scratch
-nboot render --spec nboot-spec.json --pack ./packs/base --out ./my-project
+nboot new my-project
 ```
 
-The spec describes your project. The pack describes what to generate. The engine connects them deterministically: same spec + same pack = same output, every time.
+One command, complete project:
+
+```
+my-project/
+├── pyproject.toml
+├── src/my_project/__init__.py
+├── src/my_project/py.typed
+├── tests/conftest.py
+├── tests/test_my_project.py
+├── README.md
+├── LICENSE
+├── .gitignore
+├── .github/workflows/tests.yml
+├── .github/dependabot.yml
+├── .pre-commit-config.yaml
+├── CLAUDE.md
+├── DEBT.md
+└── nboot-spec.json
+```
+
+## How it works
+
+```
+spec (what your project is) + pack (what to generate) → rendered output
+```
+
+The **spec** describes your project: name, owner, Python version, license. The **pack** is a set of Jinja2 templates with a manifest declaring conditions and loops. The **engine** connects them deterministically — same spec + same pack = same output, every time.
 
 ## Packs
 
-Seven template packs, layered with explicit dependencies:
+Eight template packs, layered with explicit dependencies:
 
-```
-base (required, runs first)
-├── security-scanning
-├── github-templates
-├── review-system
-├── quality-gates
-├── code-hygiene
-└── release-pipeline
-```
+| Pack | What it generates |
+|------|-------------------|
+| **scaffold** | Project skeleton — pyproject.toml, src layout, tests, README, LICENSE, .gitignore |
+| **base** | CI workflows, pre-commit config, dependabot, tool config, CLAUDE.md, DEBT.md |
+| **security-scanning** | CodeQL analysis, OpenSSF Scorecard |
+| **github-templates** | Bug report, feature request, issue config, PR template |
+| **review-system** | Code review and security review workflows |
+| **quality-gates** | Quality metrics baseline, test parity map |
+| **code-hygiene** | CONTRIBUTING.md |
+| **release-pipeline** | SLSA L3 build workflow, release dispatcher, changelog config |
 
-All elective packs depend on `base`. The agent sequences them; the engine renders one at a time.
+`nboot new` applies `scaffold` + `base`. All other packs are elective and can be layered on afterward with `nboot apply`.
 
-| Pack | Templates | What it ships |
-|------|-----------|---------------|
-| **base** | 6 | CI workflows (test + lint + security), pre-commit config, dependabot, pyproject tool config, CLAUDE.md, DEBT.md |
-| **security-scanning** | 2 | CodeQL analysis, OpenSSF Scorecard |
-| **github-templates** | 4 | Bug report form, feature request form, issue config, PR template |
-| **review-system** | 2 | Code review workflow instructions, security review instructions |
-| **quality-gates** | 2 | Quality metrics baseline (JSON), test parity map |
-| **code-hygiene** | 1 | CONTRIBUTING.md with project-specific conventions |
-| **release-pipeline** | 3 | SLSA L3 reusable build workflow, release dispatcher, git-cliff changelog config |
+## CLI reference
 
-Packs never modify source code, never make governance decisions, and never fix pre-existing violations — they document them.
+| Command | Description |
+|---------|-------------|
+| `nboot new <name>` | Create a new project with scaffold + base packs |
+| `nboot render --spec --pack --out` | Render a single pack to a new directory |
+| `nboot apply --spec --pack --target` | Apply a pack to an existing project |
+| `nboot diff --spec --pack --target` | Preview changes without writing |
+| `nboot init --target` | Generate spec by inspecting an existing project |
+| `nboot validate --spec` | Validate spec and manifest |
+| `nboot list-packs` | List available packs |
 
 ## Architecture
 
@@ -76,13 +93,11 @@ spec.json + pack/
   -> output/
 ```
 
-Stages 0-3 are pure functions — spec and pack in, rendered files out, no side effects. This is by design: a future TypeScript rewrite runs stages 0-3 on Cloudflare Workers, with an ultra-lightweight local client handling stages 4-5.
-
-The engine is ~800 lines across 10 modules. All project-specific opinions live in the spec and the template pack, never in the engine.
+Stages 0-3 are pure functions — spec and pack in, rendered files out, no side effects. All project-specific opinions live in the spec and the template pack, never in the engine.
 
 ```
 src/navi_bootstrap/
-├── cli.py        # Click CLI: init, render, apply, diff, validate
+├── cli.py        # Click CLI: new, init, render, apply, diff, validate, list-packs
 ├── engine.py     # Plan + Render (stages 2-3), sandboxed dest paths
 ├── manifest.py   # Manifest loading + validation
 ├── spec.py       # Spec loading + JSON Schema validation
@@ -90,7 +105,7 @@ src/navi_bootstrap/
 ├── validate.py   # Stage 4: post-render validation
 ├── hooks.py      # Stage 5: hook runner
 ├── sanitize.py   # Input sanitization (homoglyphs, traversal, injection)
-├── init.py       # Project inspection → spec generation
+├── init.py       # Project inspection -> spec generation
 └── diff.py       # Drift detection (render-to-memory + unified diff)
 ```
 
@@ -110,4 +125,4 @@ Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 Project Navi
+[MIT](LICENSE) -- Copyright (c) 2026 Project Navi
