@@ -172,6 +172,8 @@ class TestBasePackRender:
         assert "# --- nboot: base ---" in content
         assert "[tool.ruff]" in content
         assert "py39" in content  # target-version derived from python_version
+        assert "[tool.pytest.ini_options]" in content
+        assert "[dependency-groups]" in content
 
     def test_ci_skipped_when_feature_false(
         self,

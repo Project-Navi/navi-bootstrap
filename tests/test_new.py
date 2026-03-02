@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -222,3 +223,46 @@ class TestNbootNew:
             assert result.exit_code == 0, result.output
             assert "Created my-project/" in result.output
             assert "8 files" in result.output
+
+    def test_no_duplicate_toml_sections(self, runner: CliRunner, tmp_path: Path) -> None:
+        """scaffold + base produce valid TOML without duplicate sections."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["new", "my-project", "--skip-resolve"])
+            assert result.exit_code == 0, result.output
+            content = (Path("my-project") / "pyproject.toml").read_text()
+            for section in [
+                "[dependency-groups]",
+                "[tool.ruff]",
+                "[tool.ruff.lint]",
+                "[tool.mypy]",
+                "[tool.pytest.ini_options]",
+            ]:
+                count = content.count(section)
+                assert count == 1, f"{section} appears {count} times:\n{content}"
+
+    def test_scaffold_only_has_no_tool_config(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Scaffold alone produces pyproject.toml without tool config sections."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(
+                cli, ["new", "my-project", "--skip-resolve", "--packs", "scaffold"]
+            )
+            assert result.exit_code == 0, result.output
+            content = (Path("my-project") / "pyproject.toml").read_text()
+            assert "[build-system]" in content
+            assert "[project]" in content
+            assert "[tool.ruff]" not in content
+            assert "[tool.mypy]" not in content
+            assert "[dependency-groups]" not in content
+
+    @patch("navi_bootstrap.cli.gh_available", return_value=False)
+    def test_graceful_degradation_without_gh(
+        self, mock_gh: MagicMock, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """nboot new without gh CLI degrades gracefully instead of failing."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["new", "my-project"])
+            assert result.exit_code == 0, result.output
+            assert "gh CLI not found" in result.output
+            # SHAs should be placeholders
+            ci_content = (Path("my-project") / ".github" / "workflows" / "tests.yml").read_text()
+            assert "SKIP_SHA_RESOLUTION" in ci_content

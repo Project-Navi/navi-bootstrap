@@ -18,10 +18,26 @@ from navi_bootstrap.hooks import run_hooks
 from navi_bootstrap.init import inspect_project
 from navi_bootstrap.manifest import ManifestError, load_manifest
 from navi_bootstrap.packs import PackError, get_ordered_packs, list_packs, resolve_pack
-from navi_bootstrap.resolve import ResolveError, resolve_action_shas
+from navi_bootstrap.resolve import ResolveError, gh_available, resolve_action_shas
 from navi_bootstrap.sanitize import sanitize_manifest, sanitize_spec
 from navi_bootstrap.spec import SpecError, build_spec_for_new, load_spec
 from navi_bootstrap.validate import run_validations
+
+_GH_NOTICE = (
+    "Notice: gh CLI not found — SHA resolution requires gh "
+    "(https://cli.github.com).\n"
+    "  Action SHAs left as placeholders. Re-run without --skip-resolve after installing gh."
+)
+
+
+def _check_gh_or_skip(skip_resolve: bool) -> bool:
+    """Return effective skip_resolve, printing a notice if gh is unavailable."""
+    if skip_resolve:
+        return True
+    if not gh_available():
+        click.echo(_GH_NOTICE, err=True)
+        return True
+    return False
 
 
 @click.group()
@@ -93,9 +109,10 @@ def render_cmd(
         output_dir = out
 
     # Stage 0: Resolve SHAs
+    effective_skip = _check_gh_or_skip(skip_resolve or dry_run)
     action_shas_config = manifest.get("action_shas", [])
     try:
-        shas, versions = resolve_action_shas(action_shas_config, skip=skip_resolve or dry_run)
+        shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
     except ResolveError as e:
         raise click.ClickException(str(e)) from e
 
@@ -175,9 +192,10 @@ def apply(
     manifest = sanitize_manifest(manifest)
 
     # Stage 0: Resolve SHAs
+    effective_skip = _check_gh_or_skip(skip_resolve or dry_run)
     action_shas_config = manifest.get("action_shas", [])
     try:
-        shas, versions = resolve_action_shas(action_shas_config, skip=skip_resolve or dry_run)
+        shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
     except ResolveError as e:
         raise click.ClickException(str(e)) from e
 
@@ -266,9 +284,10 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
     manifest = sanitize_manifest(manifest)
 
     # Stage 0: Resolve SHAs
+    effective_skip = _check_gh_or_skip(skip_resolve)
     action_shas_config = manifest.get("action_shas", [])
     try:
-        shas, versions = resolve_action_shas(action_shas_config, skip=skip_resolve)
+        shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
     except ResolveError as e:
         raise click.ClickException(str(e)) from e
 
@@ -433,6 +452,7 @@ def new(
         return
 
     # Render packs in order
+    effective_skip = _check_gh_or_skip(skip_resolve)
     output_dir.mkdir(parents=True)
     total_written: list[Path] = []
 
@@ -446,7 +466,7 @@ def new(
         # Stage 0: Resolve SHAs
         action_shas_config = manifest.get("action_shas", [])
         try:
-            shas, versions = resolve_action_shas(action_shas_config, skip=skip_resolve)
+            shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
         except ResolveError as e:
             raise click.ClickException(str(e)) from e
 

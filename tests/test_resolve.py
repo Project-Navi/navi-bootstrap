@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from navi_bootstrap.resolve import ResolveError, resolve_action_shas
+from navi_bootstrap.resolve import ResolveError, gh_available, resolve_action_shas
 
 
 @pytest.fixture
@@ -86,3 +87,25 @@ class TestResolveActionShas:
         assert shas["actions_checkout"] == "SKIP_SHA_RESOLUTION"
         assert versions["actions_checkout"] == "v4.2.2"
         mock_run.assert_not_called()
+
+
+class TestGhAvailable:
+    @patch("navi_bootstrap.resolve.subprocess.run")
+    def test_returns_true_when_gh_installed(self, mock_run: MagicMock) -> None:
+        mock_run.return_value = MagicMock(returncode=0)
+        assert gh_available() is True
+
+    @patch("navi_bootstrap.resolve.subprocess.run")
+    def test_returns_false_when_gh_not_found(self, mock_run: MagicMock) -> None:
+        mock_run.side_effect = FileNotFoundError
+        assert gh_available() is False
+
+    @patch("navi_bootstrap.resolve.subprocess.run")
+    def test_returns_false_when_gh_fails(self, mock_run: MagicMock) -> None:
+        mock_run.return_value = MagicMock(returncode=1)
+        assert gh_available() is False
+
+    @patch("navi_bootstrap.resolve.subprocess.run")
+    def test_returns_false_on_timeout(self, mock_run: MagicMock) -> None:
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="gh", timeout=5)
+        assert gh_available() is False

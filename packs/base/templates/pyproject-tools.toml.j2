@@ -1,25 +1,38 @@
+{%- set pv = spec.python_version | default("3.12") -%}
+{%- set tst = spec.structure.test_dir | default("tests") if spec.structure is defined else "tests" -%}
+{%- set _base_dev = ["pytest", "pytest-cov", "ruff", "mypy", "bandit", "pre-commit", "detect-secrets"] -%}
 
 [dependency-groups]
 dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
     "ruff>=0.9.0",
     "mypy>=1.8.0",
     "bandit>=1.9.3",
     "pre-commit>=4.0.0",
     "detect-secrets>=1.5.0",
-    "pytest>=8.0.0",
-    "pytest-cov>=5.0.0",
+{% if spec.dependencies is defined and spec.dependencies.dev is defined -%}
+{% for dep in spec.dependencies.dev -%}
+{%- set dep_base = dep.split('>')[0].split('<')[0].split('=')[0].split('!')[0].split('[')[0] -%}
+{% if dep_base not in _base_dev %}    "{{ dep }}",
+{% endif -%}
+{% endfor -%}
+{% endif -%}
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["{{ tst }}"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py{{ spec.python_version | default("3.12") | replace('.', '') }}"
+target-version = "py{{ pv | replace('.', '') }}"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "RUF", "C4"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "{{ spec.python_version | default("3.12") }}"
+python_version = "{{ pv }}"
 warn_unused_configs = true
 disallow_untyped_defs = true
 check_untyped_defs = true

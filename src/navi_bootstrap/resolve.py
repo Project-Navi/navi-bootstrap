@@ -14,6 +14,20 @@ class ResolveError(Exception):
     """Raised when SHA resolution fails."""
 
 
+def gh_available() -> bool:
+    """Check if the gh CLI is installed and accessible."""
+    try:
+        result = subprocess.run(
+            ["gh", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
 def _gh_api(endpoint: str) -> dict[str, Any]:
     """Call gh api and return parsed JSON."""
     result = subprocess.run(
