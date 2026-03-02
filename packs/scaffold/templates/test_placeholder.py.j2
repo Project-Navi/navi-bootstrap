@@ -1,0 +1,12 @@
+{%- set pkg = spec.name | replace('-', '_') -%}
+"""Basic tests for {{ spec.name }}."""
+
+from __future__ import annotations
+
+
+def test_version_exists() -> None:
+    """Verify the package exposes a __version__ attribute."""
+    from {{ pkg }} import __version__
+
+    assert isinstance(__version__, str)
+    assert len(__version__) > 0

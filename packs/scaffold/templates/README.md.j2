@@ -1,0 +1,39 @@
+# {{ spec.name }}
+
+{{ spec.description | default("") }}
+
+## Installation
+
+```bash
+pip install {{ spec.name }}
+```
+
+## Development
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
+
+```bash
+# Clone and install
+{%- if spec.github is defined -%}
+git clone https://github.com/{{ spec.github.org | default("OWNER") }}/{{ spec.github.repo | default(spec.name) }}.git
+{%- else -%}
+git clone https://github.com/OWNER/{{ spec.name }}.git
+{%- endif %}
+cd {{ spec.name }}
+uv sync
+
+# Run tests
+uv run pytest
+
+# Lint and format
+uv run ruff check .
+uv run ruff format .
+
+# Type check
+uv run mypy {{ spec.structure.src_dir | default("src") }}/
+```
+{% if spec.license is defined %}
+## License
+
+This project is licensed under the {{ spec.license }} License. See [LICENSE](LICENSE) for details.
+{% endif %}

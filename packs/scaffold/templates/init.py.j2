@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: {{ spec.license | default("MIT") }}
+{% if spec.author is defined -%}
+# Copyright (c) {{ spec.author.name }}
+{% endif -%}
+
+"""{{ spec.description | default(spec.name) }}."""
+
+from __future__ import annotations
+
+__version__ = "{{ spec.version | default('0.1.0') }}"

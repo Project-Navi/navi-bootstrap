@@ -1,0 +1,26 @@
+name: scaffold
+version: "0.1.0"
+description: Project skeleton — pyproject.toml, src layout, tests, README, LICENSE, .gitignore
+templates:
+  - src: pyproject.toml.j2
+    dest: pyproject.toml
+  - src: init.py.j2
+    dest: "{{ spec.structure.src_dir }}/__init__.py"
+  - src: py.typed.j2
+    dest: "{{ spec.structure.src_dir }}/py.typed"
+  - src: conftest.py.j2
+    dest: "{{ spec.structure.test_dir }}/conftest.py"
+  - src: test_placeholder.py.j2
+    dest: "{{ spec.structure.test_dir }}/test_{{ spec.name | replace('-', '_') }}.py"
+  - src: README.md.j2
+    dest: README.md
+  - src: LICENSE.j2
+    dest: LICENSE
+  - src: gitignore.j2
+    dest: .gitignore
+conditions:
+  "LICENSE.j2": "spec.license"
+loops: {}
+strip_suffix: ".j2"
+dependencies: []
+action_shas: []
