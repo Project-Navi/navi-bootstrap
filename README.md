@@ -2,11 +2,11 @@
 
 [![Tests](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/tests.yml/badge.svg)](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/tests.yml)
 [![CodeQL](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/codeql.yml/badge.svg)](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/codeql.yml)
-[![Fuzz](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/fuzz.yml/badge.svg)](https://github.com/Project-Navi/navi-bootstrap/actions/workflows/fuzz.yml)
 [![codecov](https://codecov.io/gh/Project-Navi/navi-bootstrap/graph/badge.svg?token=PJ9F194alS)](https://codecov.io/gh/Project-Navi/navi-bootstrap)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Project-Navi/navi-bootstrap/badge)](https://scorecard.dev/viewer/?uri=github.com/Project-Navi/navi-bootstrap)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 [![PyPI](https://img.shields.io/pypi/v/navi-bootstrap)](https://pypi.org/project/navi-bootstrap/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 

@@ -14,10 +14,8 @@ jobs:
       tag_name: ${{ github.ref_name }}
     permissions:
       contents: write
-      packages: write
       id-token: write
       attestations: write
-      security-events: write
 
   publish:
     needs: build
