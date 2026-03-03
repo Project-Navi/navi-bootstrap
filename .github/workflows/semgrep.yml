@@ -21,11 +21,11 @@ jobs:
     container:
       image: semgrep/semgrep@sha256:e04d2cb132288d90035db8791d64f610cb255b21e727b94db046243b30c01ae9  # 1.152.0
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Run Semgrep
         run: semgrep scan --config p/python --config p/owasp-top-ten --sarif -o semgrep.sarif .
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@1b549b9259bda1cb5ddde3b41741a82a2d15a841  # v3.28.13
+        uses: github/codeql-action/upload-sarif@c793b717bc78562f491db7b0e93a3a178b099162  # v4.32.5
         if: always()
         with:
           sarif_file: semgrep.sarif
