@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 import yaml
 
-from navi_bootstrap.engine import plan, render
+from navi_bootstrap.engine import _eval_condition, plan, render
 
 # --- Fixtures ---
 
@@ -274,3 +274,24 @@ class TestRender:
             mode="apply",
         )
         assert (output_dir / "hello.txt").exists()
+
+
+# --- Equality condition tests ---
+
+
+class TestEvalConditionEquality:
+    def test_equality_match(self) -> None:
+        spec = {"license": "MIT"}
+        assert _eval_condition("spec.license == 'MIT'", spec) is True
+
+    def test_equality_no_match(self) -> None:
+        spec = {"license": "Apache-2.0"}
+        assert _eval_condition("spec.license == 'MIT'", spec) is False
+
+    def test_equality_missing_key(self) -> None:
+        spec: dict[str, Any] = {}
+        assert _eval_condition("spec.license == 'MIT'", spec) is False
+
+    def test_equality_with_double_quotes(self) -> None:
+        spec = {"license": "MIT"}
+        assert _eval_condition('spec.license == "MIT"', spec) is True

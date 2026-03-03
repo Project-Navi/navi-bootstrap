@@ -19,7 +19,7 @@ templates:
   - src: gitignore.j2
     dest: .gitignore
 conditions:
-  "LICENSE.j2": "spec.license"
+  "LICENSE.j2": "spec.license == 'MIT'"
 loops: {}
 strip_suffix: ".j2"
 dependencies: []

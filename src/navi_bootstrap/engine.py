@@ -61,9 +61,20 @@ def _resolve_dotpath(obj: Any, path: str) -> Any:
 def _eval_condition(condition_expr: str, spec: dict[str, Any]) -> bool:
     """Evaluate a dotpath condition expression against spec context.
 
-    Supports negation with '!' prefix: "!spec.recon.existing_tools.ruff"
-    evaluates to True when the dotpath is falsy.
+    Supports:
+      - Dotpath truthiness: "spec.features.ci" (truthy check)
+      - Negation with '!' prefix: "!spec.recon.existing_tools.ruff"
+      - Equality: "spec.license == 'MIT'" (string comparison)
     """
+    # Equality comparison: "spec.field == 'value'"
+    if "==" in condition_expr:
+        parts = condition_expr.split("==", 1)
+        path = parts[0].strip()
+        expected = parts[1].strip().strip("'\"")
+        context = {"spec": spec}
+        value = _resolve_dotpath(context, path)
+        return bool(value == expected)
+
     # Count leading ! for proper negation (!! cancels out)
     bang_count = len(condition_expr) - len(condition_expr.lstrip("!"))
     negate = bang_count % 2 == 1

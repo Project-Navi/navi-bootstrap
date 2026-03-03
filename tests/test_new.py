@@ -182,6 +182,47 @@ class TestNbootNew:
             toml_content = (Path("my-project") / "pyproject.toml").read_text()
             assert "A cool project" in toml_content
 
+    def test_no_license_file_for_non_mit(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Non-MIT license skips LICENSE file generation."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(
+                cli,
+                [
+                    "new",
+                    "my-project",
+                    "--skip-resolve",
+                    "--license",
+                    "Apache-2.0",
+                    "--packs",
+                    "scaffold",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert not (Path("my-project") / "LICENSE").exists()
+            # But spec still has the license
+            spec = json.loads((Path("my-project") / "nboot-spec.json").read_text())
+            assert spec["license"] == "Apache-2.0"
+
+    def test_license_file_for_mit(self, runner: CliRunner, tmp_path: Path) -> None:
+        """MIT license generates LICENSE file."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(
+                cli,
+                [
+                    "new",
+                    "my-project",
+                    "--skip-resolve",
+                    "--license",
+                    "MIT",
+                    "--packs",
+                    "scaffold",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert (Path("my-project") / "LICENSE").exists()
+            content = (Path("my-project") / "LICENSE").read_text()
+            assert "MIT License" in content
+
     def test_with_license(self, runner: CliRunner, tmp_path: Path) -> None:
         """--license sets the license in spec and renders LICENSE file."""
         with runner.isolated_filesystem(temp_dir=tmp_path):

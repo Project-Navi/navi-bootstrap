@@ -28,10 +28,10 @@ class TestScaffoldManifest:
         assert "templates" in manifest
 
     def test_manifest_has_license_condition(self) -> None:
-        """LICENSE template is conditional on spec.license."""
+        """LICENSE template is conditional on MIT license only."""
         pack_dir = resolve_pack("scaffold")
         manifest = load_manifest(pack_dir / "manifest.yaml")
-        assert manifest["conditions"]["LICENSE.j2"] == "spec.license"
+        assert manifest["conditions"]["LICENSE.j2"] == "spec.license == 'MIT'"
 
 
 class TestScaffoldRender:
