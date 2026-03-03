@@ -254,6 +254,23 @@ class TestNbootNew:
             assert "[tool.mypy]" not in content
             assert "[dependency-groups]" not in content
 
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "../traversal",
+            "foo/bar",
+            "foo\\bar",
+            ".hidden",
+            "..double",
+        ],
+    )
+    def test_rejects_unsafe_names(self, runner: CliRunner, tmp_path: Path, name: str) -> None:
+        """nboot new rejects names with path separators or leading dots."""
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["new", name, "--skip-resolve"])
+            assert result.exit_code != 0
+            assert "Unsafe project name" in result.output
+
     @patch("navi_bootstrap.cli.gh_available", return_value=False)
     def test_graceful_degradation_without_gh(
         self, mock_gh: MagicMock, runner: CliRunner, tmp_path: Path

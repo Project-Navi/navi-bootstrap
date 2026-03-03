@@ -408,6 +408,12 @@ def new(
     dry_run: bool,
 ) -> None:
     """Create a new Python project with operational infrastructure."""
+    # Validate name before using as path
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        raise click.ClickException(
+            f"Unsafe project name {name!r}. "
+            "Names must not contain path separators or start with a dot."
+        )
     output_dir = Path(name)
     if output_dir.exists():
         raise click.ClickException(
