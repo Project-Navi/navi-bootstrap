@@ -39,8 +39,8 @@ jobs:
         with:
           python-version: {% raw %}${{ matrix.python-version }}{% endraw %}
 
-      - name: Install uv
-        run: pip install uv
+      - name: Set up uv
+        uses: astral-sh/setup-uv@{{ action_shas.setup_uv }}  # {{ action_versions.setup_uv }}
 
       - name: Install dependencies
         run: uv sync
@@ -66,8 +66,8 @@ jobs:
         with:
           python-version: "{{ pv }}"
 
-      - name: Install uv
-        run: pip install uv
+      - name: Set up uv
+        uses: astral-sh/setup-uv@{{ action_shas.setup_uv }}  # {{ action_versions.setup_uv }}
 
       - name: Install dependencies
         run: uv sync

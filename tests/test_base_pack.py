@@ -56,6 +56,7 @@ def fake_shas() -> dict[str, str]:
         "actions_checkout": "a" * 40,
         "harden_runner": "b" * 40,
         "actions_setup_python": "c" * 40,
+        "setup_uv": "d" * 40,
     }
 
 
@@ -65,6 +66,7 @@ def fake_versions() -> dict[str, str]:
         "actions_checkout": "v4.2.2",
         "harden_runner": "v2.10.4",
         "actions_setup_python": "v5.4.0",
+        "setup_uv": "v5.3.0",
     }
 
 
@@ -145,6 +147,7 @@ class TestBasePackRender:
         assert fake_shas["actions_checkout"] in ci_content
         assert fake_shas["harden_runner"] in ci_content
         assert fake_shas["actions_setup_python"] in ci_content
+        assert fake_shas["setup_uv"] in ci_content
 
     def test_pyproject_append_has_markers(
         self,

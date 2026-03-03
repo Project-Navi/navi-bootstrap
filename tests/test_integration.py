@@ -1211,3 +1211,53 @@ class TestDockerConditional:
 
         build_yml = (target / ".github" / "workflows" / "_build-reusable.yml").read_text()
         assert "docker" in build_yml.lower()
+
+
+class TestSetupUvAction:
+    """tests.yml.j2 uses astral-sh/setup-uv instead of pip install uv."""
+
+    def test_tests_yml_uses_setup_uv_action(self, tmp_path: Path) -> None:
+        """tests.yml.j2 uses astral-sh/setup-uv, not pip install uv."""
+        from navi_bootstrap.engine import RenderEntry, RenderPlan, render_to_files
+        from navi_bootstrap.packs import resolve_pack
+
+        pack_dir = resolve_pack("base")
+        templates_dir = pack_dir / "templates"
+
+        spec = {
+            "name": "my-project",
+            "language": "python",
+            "features": {"ci": True, "pre_commit": True},
+            "python_version": "3.12",
+        }
+        render_plan = RenderPlan(
+            pack_name="base",
+            entries=[
+                RenderEntry(
+                    src="workflows/tests.yml.j2",
+                    dest=".github/workflows/tests.yml",
+                )
+            ],
+        )
+        shas = {
+            "harden_runner": "a" * 40,
+            "actions_checkout": "b" * 40,
+            "actions_setup_python": "c" * 40,
+            "setup_uv": "d" * 40,
+        }
+        versions = {
+            "harden_runner": "v2.10.4",
+            "actions_checkout": "v4.2.2",
+            "actions_setup_python": "v5.4.0",
+            "setup_uv": "v5.3.0",
+        }
+        rendered = render_to_files(
+            render_plan,
+            spec,
+            templates_dir,
+            action_shas=shas,
+            action_versions=versions,
+        )
+        content = rendered[0].content
+        assert "pip install uv" not in content
+        assert "astral-sh/setup-uv@" in content
