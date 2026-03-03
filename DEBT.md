@@ -14,6 +14,12 @@ This file tracks known technical debt in the navi-bootstrap codebase. Debt items
 
 | ID | Description | Severity | Added | Owner | Notes |
 |----|-------------|----------|-------|-------|-------|
+| D1 | `init.py` misses `async def test_` pattern — undercounts async tests | Low | 2026-03-03 | — | Regex on line 252 only matches `def test_`, not `async def test_` |
+| D2 | `init.py` drops `license = {file = "LICENSE"}` format (PEP 639) | Low | 2026-03-03 | — | Lines 81-85 handle string and dict.text, not dict.file |
+| D3 | `spec.name` schema has no pattern validation — allows spaces, newlines | Low | 2026-03-03 | — | spec-schema.json only has `minLength: 1`, no pattern constraint |
+| D4 | `secrets-baseline.json.j2` hardcoded timestamp `2026-01-01T00:00:00Z` | Low | 2026-03-03 | — | `now` variable never injected into render context |
+| D5 | Release pipeline requires uninstalled tools (cyclonedx-py, pip-licenses) | Low | 2026-03-03 | — | `_build-reusable.yml.j2` references tools not in project deps |
+| D6 | `strip_suffix` manifest field is vestigial — never read by engine | Low | 2026-03-03 | — | Declared in all manifests, processed by nothing |
 
 ---
 
