@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -483,58 +484,65 @@ def new(
     output_dir.mkdir(parents=True)
     total_written: list[Path] = []
 
-    for i, pack_dir in enumerate(pack_dirs):
-        try:
-            manifest = load_manifest(pack_dir / "manifest.yaml")
-        except ManifestError as e:
-            raise click.ClickException(str(e)) from e
-        manifest = sanitize_manifest(manifest)
+    try:
+        for i, pack_dir in enumerate(pack_dirs):
+            try:
+                manifest = load_manifest(pack_dir / "manifest.yaml")
+            except ManifestError as e:
+                raise click.ClickException(str(e)) from e
+            manifest = sanitize_manifest(manifest)
 
-        # Stage 0: Resolve SHAs
-        action_shas_config = manifest.get("action_shas", [])
-        try:
-            shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
-        except ResolveError as e:
-            raise click.ClickException(str(e)) from e
+            # Stage 0: Resolve SHAs
+            action_shas_config = manifest.get("action_shas", [])
+            try:
+                shas, versions = resolve_action_shas(action_shas_config, skip=effective_skip)
+            except ResolveError as e:
+                raise click.ClickException(str(e)) from e
 
-        # Stage 2: Plan
-        templates_dir = pack_dir / "templates"
-        try:
-            render_plan = plan(manifest, spec_data, templates_dir)
-        except (jinja2.TemplateError, TypeError) as e:
-            raise click.ClickException(f"Template error: {e}") from e
+            # Stage 2: Plan
+            templates_dir = pack_dir / "templates"
+            try:
+                render_plan = plan(manifest, spec_data, templates_dir)
+            except (jinja2.TemplateError, TypeError) as e:
+                raise click.ClickException(f"Template error: {e}") from e
 
-        # Stage 3: Render — first pack is greenfield, subsequent packs apply
-        mode = "greenfield" if i == 0 else "apply"
-        try:
-            written = render(
-                render_plan,
-                spec_data,
-                templates_dir,
-                output_dir,
-                mode=mode,
-                action_shas=shas,
-                action_versions=versions,
-            )
-        except (FileExistsError, ValueError) as e:
-            raise click.ClickException(str(e)) from e
-        except (jinja2.TemplateError, TypeError) as e:
-            raise click.ClickException(f"Template error: {e}") from e
+            # Stage 3: Render — first pack is greenfield, subsequent packs apply
+            mode = "greenfield" if i == 0 else "apply"
+            try:
+                written = render(
+                    render_plan,
+                    spec_data,
+                    templates_dir,
+                    output_dir,
+                    mode=mode,
+                    action_shas=shas,
+                    action_versions=versions,
+                )
+            except (FileExistsError, ValueError) as e:
+                raise click.ClickException(str(e)) from e
+            except (jinja2.TemplateError, TypeError) as e:
+                raise click.ClickException(f"Template error: {e}") from e
 
-        total_written.extend(written)
-        click.echo(f"  [{manifest['name']}] {len(written)} files")
+            total_written.extend(written)
+            click.echo(f"  [{manifest['name']}] {len(written)} files")
 
-    # Write spec file
-    spec_path = output_dir / "nboot-spec.json"
-    spec_path.write_text(json.dumps(spec_data, indent=2) + "\n")
+        # Write spec file
+        spec_path = output_dir / "nboot-spec.json"
+        spec_path.write_text(json.dumps(spec_data, indent=2) + "\n")
 
-    # Initialize git repo
-    subprocess.run(
-        ["git", "init"],
-        cwd=output_dir,
-        capture_output=True,
-        check=False,
-    )
+        # Initialize git repo
+        subprocess.run(
+            ["git", "init"],
+            cwd=output_dir,
+            capture_output=True,
+            check=False,
+        )
+    except click.ClickException:
+        shutil.rmtree(output_dir, ignore_errors=True)
+        raise
+    except (jinja2.TemplateError, TypeError) as e:
+        shutil.rmtree(output_dir, ignore_errors=True)
+        raise click.ClickException(f"Template error: {e}") from e
 
     click.echo(
         f"\nCreated {name}/ — {len(total_written)} files from "

@@ -312,6 +312,34 @@ class TestNbootNew:
             assert result.exit_code != 0
             assert "Unsafe project name" in result.output
 
+    def test_cleans_up_on_failure(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Failed nboot new removes partial directory."""
+        # Create a broken pack that will fail mid-render
+        bad_pack = tmp_path / "badpack"
+        bad_pack.mkdir()
+        templates_dir = bad_pack / "templates"
+        templates_dir.mkdir()
+
+        manifest = {
+            "name": "broken",
+            "version": "0.1.0",
+            "templates": [{"src": "out.j2", "dest": "out.txt"}],
+            "conditions": {},
+            "loops": {},
+        }
+        import yaml
+
+        (bad_pack / "manifest.yaml").write_text(yaml.dump(manifest))
+        (templates_dir / "out.j2").write_text("{{ undefined_var }}")
+
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(
+                cli, ["new", "myproj", "--skip-resolve", "--packs", str(bad_pack)]
+            )
+            assert result.exit_code != 0
+            # Directory should be cleaned up
+            assert not Path("myproj").exists()
+
     @patch("navi_bootstrap.cli.gh_available", return_value=False)
     def test_graceful_degradation_without_gh(
         self, mock_gh: MagicMock, runner: CliRunner, tmp_path: Path
