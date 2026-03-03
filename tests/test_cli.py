@@ -244,3 +244,71 @@ class TestListPacksCommand:
         ]
         for name in expected:
             assert name in result.output, f"Missing pack: {name}"
+
+
+class TestCLIErrorHandling:
+    """CLI commands produce clean error messages for template errors."""
+
+    def test_render_catches_undefined_error(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Template referencing missing variable gives clean error, not traceback."""
+        pack_dir = tmp_path / "pack"
+        pack_dir.mkdir()
+        templates_dir = pack_dir / "templates"
+        templates_dir.mkdir()
+
+        manifest = {
+            "name": "bad-pack",
+            "version": "0.1.0",
+            "templates": [{"src": "out.txt.j2", "dest": "out.txt"}],
+            "conditions": {},
+            "loops": {},
+        }
+        (pack_dir / "manifest.yaml").write_text(yaml.dump(manifest))
+        (templates_dir / "out.txt.j2").write_text("{{ spec.nonexistent.deeply.nested }}")
+
+        spec = {"name": "test", "language": "python"}
+        spec_file = tmp_path / "spec.json"
+        spec_file.write_text(json.dumps(spec))
+
+        out_dir = tmp_path / "output"
+        result = runner.invoke(
+            cli,
+            [
+                "render",
+                "--spec",
+                str(spec_file),
+                "--pack",
+                str(pack_dir),
+                "--out",
+                str(out_dir),
+                "--skip-resolve",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "Template error" in result.output
+        # Should NOT have a raw Python traceback
+        assert "Traceback" not in (result.output + str(result.exception or ""))
+
+    def test_new_catches_template_error(self, runner: CliRunner, tmp_path: Path) -> None:
+        """nboot new with a broken pack gives clean error."""
+        pack_dir = tmp_path / "badpack"
+        pack_dir.mkdir()
+        templates_dir = pack_dir / "templates"
+        templates_dir.mkdir()
+
+        manifest = {
+            "name": "broken",
+            "version": "0.1.0",
+            "templates": [{"src": "out.j2", "dest": "out.txt"}],
+            "conditions": {},
+            "loops": {},
+        }
+        (pack_dir / "manifest.yaml").write_text(yaml.dump(manifest))
+        (templates_dir / "out.j2").write_text("{{ undefined_var }}")
+
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(
+                cli, ["new", "myproj", "--skip-resolve", "--packs", str(pack_dir)]
+            )
+            assert result.exit_code != 0
+            assert "Template error" in result.output

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+import jinja2
 
 from navi_bootstrap.diff import compute_diffs
 from navi_bootstrap.engine import plan, render, render_to_files
@@ -118,7 +119,10 @@ def render_cmd(
 
     # Stage 2: Plan
     templates_dir = pack_dir / "templates"
-    render_plan = plan(manifest, spec_data, templates_dir)
+    try:
+        render_plan = plan(manifest, spec_data, templates_dir)
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
 
     if dry_run:
         click.echo("Dry run — render plan:")
@@ -141,6 +145,8 @@ def render_cmd(
         )
     except FileExistsError as e:
         raise click.ClickException(str(e)) from e
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
 
     click.echo(f"Rendered {len(written)} files to {output_dir}")
 
@@ -201,7 +207,10 @@ def apply(
 
     # Stage 2: Plan
     templates_dir = pack_dir / "templates"
-    render_plan = plan(manifest, spec_data, templates_dir)
+    try:
+        render_plan = plan(manifest, spec_data, templates_dir)
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
 
     if dry_run:
         click.echo("Dry run — render plan:")
@@ -211,15 +220,18 @@ def apply(
         return
 
     # Stage 3: Render
-    written = render(
-        render_plan,
-        spec_data,
-        templates_dir,
-        target,
-        mode="apply",
-        action_shas=shas,
-        action_versions=versions,
-    )
+    try:
+        written = render(
+            render_plan,
+            spec_data,
+            templates_dir,
+            target,
+            mode="apply",
+            action_shas=shas,
+            action_versions=versions,
+        )
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
     click.echo(f"Applied {len(written)} files to {target}")
 
     # Stage 4: Validate + Stage 5: Hooks
@@ -293,16 +305,22 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
 
     # Stage 2: Plan
     templates_dir = pack_dir / "templates"
-    render_plan = plan(manifest, spec_data, templates_dir)
+    try:
+        render_plan = plan(manifest, spec_data, templates_dir)
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
 
     # Stage 3: Render to memory (no filesystem writes)
-    rendered_files = render_to_files(
-        render_plan,
-        spec_data,
-        templates_dir,
-        action_shas=shas,
-        action_versions=versions,
-    )
+    try:
+        rendered_files = render_to_files(
+            render_plan,
+            spec_data,
+            templates_dir,
+            action_shas=shas,
+            action_versions=versions,
+        )
+    except (jinja2.TemplateError, TypeError) as e:
+        raise click.ClickException(f"Template error: {e}") from e
 
     # Compute diffs
     diffs = compute_diffs(rendered_files, target, pack_name=render_plan.pack_name)
@@ -450,7 +468,10 @@ def new(
                 raise click.ClickException(str(e)) from e
             manifest = sanitize_manifest(manifest)
             templates_dir = pack_dir / "templates"
-            render_plan = plan(manifest, spec_data, templates_dir)
+            try:
+                render_plan = plan(manifest, spec_data, templates_dir)
+            except (jinja2.TemplateError, TypeError) as e:
+                raise click.ClickException(f"Template error: {e}") from e
             click.echo(f"\n  [{manifest['name']}]")
             for entry in render_plan.entries:
                 mode_tag = f" [{entry.mode}]" if entry.mode != "create" else ""
@@ -478,7 +499,10 @@ def new(
 
         # Stage 2: Plan
         templates_dir = pack_dir / "templates"
-        render_plan = plan(manifest, spec_data, templates_dir)
+        try:
+            render_plan = plan(manifest, spec_data, templates_dir)
+        except (jinja2.TemplateError, TypeError) as e:
+            raise click.ClickException(f"Template error: {e}") from e
 
         # Stage 3: Render — first pack is greenfield, subsequent packs apply
         mode = "greenfield" if i == 0 else "apply"
@@ -494,6 +518,8 @@ def new(
             )
         except (FileExistsError, ValueError) as e:
             raise click.ClickException(str(e)) from e
+        except (jinja2.TemplateError, TypeError) as e:
+            raise click.ClickException(f"Template error: {e}") from e
 
         total_written.extend(written)
         click.echo(f"  [{manifest['name']}] {len(written)} files")
