@@ -125,6 +125,8 @@ pre-commit run --all-files                             # All hooks
 
 Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
 
+Full documentation: **[Wiki](https://github.com/Project-Navi/navi-bootstrap/wiki)** — architecture, pack reference, spec schema, CLI reference, custom pack authoring.
+
 ## License
 
 [MIT](LICENSE) -- Copyright (c) 2026 Project Navi
