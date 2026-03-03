@@ -224,7 +224,7 @@ class TestNbootNew:
             assert "MIT License" in content
 
     def test_with_license(self, runner: CliRunner, tmp_path: Path) -> None:
-        """--license sets the license in spec and renders LICENSE file."""
+        """--license is persisted in spec; LICENSE generation is MIT-only."""
         with runner.isolated_filesystem(temp_dir=tmp_path):
             result = runner.invoke(
                 cli,
