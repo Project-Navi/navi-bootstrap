@@ -80,6 +80,14 @@ class TestResolveActionShas:
         assert versions == {}
 
     @patch("navi_bootstrap.resolve.subprocess.run")
+    def test_timeout_raises_resolve_error(
+        self, mock_run: MagicMock, action_shas_config: list[dict[str, str]]
+    ) -> None:
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="gh", timeout=30)
+        with pytest.raises(ResolveError, match="timed out"):
+            resolve_action_shas(action_shas_config)
+
+    @patch("navi_bootstrap.resolve.subprocess.run")
     def test_skip_resolve_flag(
         self, mock_run: MagicMock, action_shas_config: list[dict[str, str]]
     ) -> None:

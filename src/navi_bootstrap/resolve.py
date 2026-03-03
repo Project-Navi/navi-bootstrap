@@ -30,11 +30,15 @@ def gh_available() -> bool:
 
 def _gh_api(endpoint: str) -> dict[str, Any]:
     """Call gh api and return parsed JSON."""
-    result = subprocess.run(
-        ["gh", "api", endpoint],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["gh", "api", endpoint],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        raise ResolveError(f"SHA resolution timed out for {endpoint}") from None
     if result.returncode != 0:
         raise ResolveError(f"gh api failed for {endpoint}: {result.stderr}")
     return cast(dict[str, Any], json.loads(result.stdout))
