@@ -107,7 +107,8 @@ src/navi_bootstrap/
 ├── hooks.py      # Stage 5: hook runner
 ├── sanitize.py   # Input sanitization (homoglyphs, traversal, injection)
 ├── init.py       # Project inspection -> spec generation
-└── diff.py       # Drift detection (render-to-memory + unified diff)
+├── diff.py       # Drift detection (render-to-memory + unified diff)
+└── packs.py      # Pack discovery, resolution, and ordering
 ```
 
 ## Development

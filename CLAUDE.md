@@ -10,14 +10,14 @@ This file provides guidance to Claude Code when working with code in this reposi
 - **Python version:** >= 3.12
 - **Build system:** hatchling
 - **Package manager:** uv
-- **CLI entry point:** `nboot` (Click-based)
+- **CLI entry point:** `nboot` (Click-based) — `nboot new` creates projects, `nboot apply` layers packs
 
 ### Repository Layout
 
 ```
 src/
-  navi_bootstrap/   # 10 modules — engine, CLI, spec, manifest, resolve, validate, diff, hooks, init, sanitize
-packs/              # 7 template packs — base, code-hygiene, github-templates, quality-gates, release-pipeline, review-system, security-scanning
+  navi_bootstrap/   # 12 modules — engine, CLI, spec, manifest, resolve, validate, diff, hooks, init, sanitize, packs
+packs/              # 8 template packs — scaffold, base, code-hygiene, github-templates, quality-gates, release-pipeline, review-system, security-scanning
 tests/              # test files including adversarial/ suite
 .github/workflows/  # CI: tests, CodeQL, scorecard, release
 ```
