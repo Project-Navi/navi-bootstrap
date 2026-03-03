@@ -1072,6 +1072,94 @@ class TestDryRunComposition:
         assert not (target / "AGENTS.md").exists()
 
 
+class TestCodeQLLanguageMapping:
+    """CodeQL uses 'javascript' for both JS and TS — verify mapping."""
+
+    def test_typescript_maps_to_javascript(self, tmp_path: Path) -> None:
+        """CodeQL template maps typescript to javascript."""
+        from navi_bootstrap.engine import RenderEntry, RenderPlan, render_to_files
+        from navi_bootstrap.packs import resolve_pack
+
+        pack_dir = resolve_pack("security-scanning")
+        templates_dir = pack_dir / "templates"
+
+        spec = {
+            "name": "ts-project",
+            "language": "typescript",
+            "features": {"ci": True},
+        }
+        render_plan = RenderPlan(
+            pack_name="security-scanning",
+            entries=[
+                RenderEntry(
+                    src="workflows/codeql.yml.j2",
+                    dest=".github/workflows/codeql.yml",
+                )
+            ],
+        )
+        shas = {
+            "harden_runner": "a" * 40,
+            "actions_checkout": "b" * 40,
+            "codeql_action": "c" * 40,
+        }
+        versions = {
+            "harden_runner": "v2.10.4",
+            "actions_checkout": "v4.2.2",
+            "codeql_action": "v3.28.13",
+        }
+        rendered = render_to_files(
+            render_plan,
+            spec,
+            templates_dir,
+            action_shas=shas,
+            action_versions=versions,
+        )
+        content = rendered[0].content
+        assert '["javascript"]' in content
+
+    def test_python_unchanged(self, tmp_path: Path) -> None:
+        """CodeQL template passes python through unchanged."""
+        from navi_bootstrap.engine import RenderEntry, RenderPlan, render_to_files
+        from navi_bootstrap.packs import resolve_pack
+
+        pack_dir = resolve_pack("security-scanning")
+        templates_dir = pack_dir / "templates"
+
+        spec = {
+            "name": "py-project",
+            "language": "python",
+            "features": {"ci": True},
+        }
+        render_plan = RenderPlan(
+            pack_name="security-scanning",
+            entries=[
+                RenderEntry(
+                    src="workflows/codeql.yml.j2",
+                    dest=".github/workflows/codeql.yml",
+                )
+            ],
+        )
+        shas = {
+            "harden_runner": "a" * 40,
+            "actions_checkout": "b" * 40,
+            "codeql_action": "c" * 40,
+        }
+        versions = {
+            "harden_runner": "v2.10.4",
+            "actions_checkout": "v4.2.2",
+            "codeql_action": "v3.28.13",
+        }
+        rendered = render_to_files(
+            render_plan,
+            spec,
+            templates_dir,
+            action_shas=shas,
+            action_versions=versions,
+        )
+        content = rendered[0].content
+        assert '["python"]' in content
+
+
 class TestDockerConditional:
     """Release-pipeline Docker sections respect spec.release.has_docker."""
 

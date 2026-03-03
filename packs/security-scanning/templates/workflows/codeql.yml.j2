@@ -1,3 +1,5 @@
+{%- set _codeql_lang_map = {"typescript": "javascript", "python": "python", "go": "go", "java": "java", "javascript": "javascript"} -%}
+{%- set _codeql_lang = _codeql_lang_map.get(spec.language, spec.language) -%}
 name: CodeQL Analysis
 
 on:
@@ -27,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: {{ spec.recon.codeql_languages | tojson if spec.recon is defined and spec.recon.codeql_languages is defined else [spec.language] | tojson }}
+        language: {{ spec.recon.codeql_languages | tojson if spec.recon is defined and spec.recon.codeql_languages is defined else [_codeql_lang] | tojson }}
 
     steps:
       - name: Harden runner
