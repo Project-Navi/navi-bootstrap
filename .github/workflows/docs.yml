@@ -28,10 +28,6 @@ jobs:
           enable-cache: true
       - name: Install docs dependencies
         run: uv sync --frozen --group docs
-      - name: Fetch brand CSS
-        run: |
-          curl -sL https://raw.githubusercontent.com/Project-Navi/brand/main/docs/stylesheets/navi.css \
-            -o docs/stylesheets/navi.css
       - name: Build site
         run: uv run zensical build
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0

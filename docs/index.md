@@ -4,8 +4,6 @@ hide:
   - toc
 ---
 
-<div class="hero-glow" markdown>
-
 # navi-bootstrap
 
 **Spec-driven Jinja2 engine and template packs for bootstrapping Python projects.**
@@ -14,8 +12,6 @@ One command. Complete project. CI, security scanning, release pipelines, quality
 
 [Get Started](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Pack Catalog](reference/packs.md){ .md-button }
-
-</div>
 
 ---
 
