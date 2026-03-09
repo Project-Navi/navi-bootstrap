@@ -16,3 +16,6 @@ grippy-data/
 
 # Internal docs — operational docs not for public tracking
 docs/internal/
+
+# Zensical build output
+site/
