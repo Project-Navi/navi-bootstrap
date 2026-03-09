@@ -114,10 +114,9 @@ The `nboot-spec.json` captures everything about your project:
 ```json
 {
   "name": "my-project",
-  "owner": "your-org",
   "description": "What it does",
   "language": "python",
-  "python_min_version": "3.12",
+  "python_version": "3.12",
   "license": "MIT",
   "structure": {
     "src_dir": "src/my_project",

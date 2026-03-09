@@ -136,7 +136,7 @@ nboot init --target <dir> [options]
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--target` | Project directory to inspect | **required** |
-| `--out` | Output path for generated spec | stdout |
+| `--out` | Output path for generated spec | nboot-spec.json |
 | `--yes` | Skip interactive prompts | false |
 
 **What it detects:**
@@ -216,4 +216,4 @@ All commands that render templates support `--skip-resolve`. This skips Stage 0 
 
 ### Trust
 
-Commands that can execute hooks (`render`, `apply`, `new`) support `--trust`. Without this flag, stages 4--5 (validation and hooks) are skipped. This is a deliberate security boundary --- see [Security Model](../explanation/security-model.md).
+Commands that can execute hooks (`render`, `apply`) support `--trust`. Without this flag, stages 4--5 (validation and hooks) are skipped. This is a deliberate security boundary --- see [Security Model](../explanation/security-model.md).

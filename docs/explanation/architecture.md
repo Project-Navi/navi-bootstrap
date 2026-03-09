@@ -41,7 +41,7 @@ The spec is validated against a JSON Schema. The pack manifest is validated agai
 
 ### Stage 2 --- Plan
 
-The engine reads the pack's `manifest.yml` and evaluates:
+The engine reads the pack's `manifest.yaml` and evaluates:
 
 - **Conditions** --- which templates to include (e.g., `spec.features.ci` gates CI workflow templates)
 - **Loops** --- which templates to expand (e.g., iterating over configured languages)
@@ -103,7 +103,7 @@ Every pack is a directory containing:
 
 ```
 packs/<pack-name>/
-├── manifest.yml      # Declares templates, conditions, loops, deps, hooks
+├── manifest.yaml      # Declares templates, conditions, loops, deps, hooks
 └── templates/        # Jinja2 templates (.j2 extension)
     ├── file1.j2
     └── subdir/

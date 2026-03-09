@@ -25,7 +25,7 @@ One command. Complete project. CI, security scanning, release pipelines, quality
 spec (what your project is) + pack (what to generate) → rendered output
 ```
 
-The **spec** describes your project: name, owner, Python version, license. The **pack** is a set of Jinja2 templates with a manifest declaring conditions and loops. The **engine** connects them deterministically --- same spec + same pack = same output, every time.
+The **spec** describes your project: name, Python version, license. The **pack** is a set of Jinja2 templates with a manifest declaring conditions and loops. The **engine** connects them deterministically --- same spec + same pack = same output, every time.
 
 ---
 
