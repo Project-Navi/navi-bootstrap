@@ -5,7 +5,7 @@
 repos:
   # Basic file hygiene
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: cef0300fd0fc4d2a87a85fa2093c6b283ea36f4b  # v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -17,7 +17,7 @@ repos:
 
   # SPDX license header enforcement
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.6
+    rev: ad1b27d73581aa16cca06fc4a0761fc563ffe8e8  # v1.5.6
     hooks:
       - id: insert-license
         name: "House rules: SPDX license header"
@@ -33,7 +33,7 @@ repos:
 
   # Linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.2
+    rev: 73413df07b4ab0bf103ca1ae73c7cec5c0ace593  # v0.9.2
     hooks:
       - id: ruff
         args: [--fix]
@@ -41,7 +41,7 @@ repos:
 
   # Security scanning
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.9.3
+    rev: 765f00d3f202f83f61d03f882f80a2d5142d81f8  # 1.9.3
     hooks:
       - id: bandit
         args: [-r, "src/navi_bootstrap", -ll, -q]
@@ -50,7 +50,7 @@ repos:
 
   # Secret detection
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+    rev: 68e8b45440415753fff70a312ece8da92ba85b4a  # v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
