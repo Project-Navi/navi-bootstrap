@@ -457,8 +457,8 @@ class TestDetectTestInfo:
             "def test_sync(): pass\n"
             "async def test_async(): pass\n"
         )
-        info = detect_test_info(tmp_path)
-        assert info["test_count"] == 2
+        result = detect_test_info(tmp_path)
+        assert result["test_count"] == 2
 # ---------------------------------------------------------------------------
 # TestInspectProject
 # ---------------------------------------------------------------------------
