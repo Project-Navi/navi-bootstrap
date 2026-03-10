@@ -447,11 +447,18 @@ class TestDetectTestInfo:
         (tests / "test_core.py").write_text("def test_it(): pass\n")
         (tests / "helpers.py").write_text("def helper(): pass\n")
         result = detect_test_info(tmp_path)
-        assert result["test_count"] == 1      def test_detects_async_test_functions(self, tmp_path: Path) -> None:         tests = tmp_path / "tests"         tests.mkdir()         test_file = tests / "test_example.py"         test_file.write_text(             "def test_sync(): pass
-"             "async def test_async(): pass
-"         )         info = detect_test_info(tmp_path)         assert info["test_count"] == 2
+        assert result["test_count"] == 1
 
-
+    def test_detects_async_test_functions(self, tmp_path: Path) -> None:
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        test_file = tests / "test_example.py"
+        test_file.write_text(
+            "def test_sync(): pass\n"
+            "async def test_async(): pass\n"
+        )
+        info = detect_test_info(tmp_path)
+        assert info["test_count"] == 2
 # ---------------------------------------------------------------------------
 # TestInspectProject
 # ---------------------------------------------------------------------------
