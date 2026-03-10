@@ -249,7 +249,7 @@ def detect_test_info(target: Path) -> dict[str, Any]:
             content = test_file.read_text(errors="replace")
         except (PermissionError, OSError):
             continue
-        count += len(re.findall(r"^\s*def test_", content, re.MULTILINE))
+        count += len(re.findall(r"^\s*(?:async\s+)?def test_", content, re.MULTILINE))
 
     return {
         "test_framework": "pytest",
