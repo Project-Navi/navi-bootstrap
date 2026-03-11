@@ -9,9 +9,10 @@ permissions: {}
 
 jobs:
   build:
-    uses: ./.github/workflows/_build-reusable.yml
+    uses: Project-Navi/.github/.github/workflows/_build-reusable.yml@6c4c2d8f200b1b9c3bd651ebc297425e45d5934e
     with:
       tag_name: ${{ github.ref_name }}
+      package_name: navi_bootstrap
     permissions:
       contents: write
       id-token: write
