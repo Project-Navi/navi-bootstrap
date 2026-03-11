@@ -13,7 +13,8 @@ concurrency:
 permissions: {}
 
 jobs:
-  test:
+  # ── Test matrix (NOT a required check) ──────────────────────────────
+  test-run:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -53,6 +54,23 @@ jobs:
           files: coverage.xml
           fail_ci_if_error: false
 
+  # ── Required check: test (aggregator) ───────────────────────────────
+  # CONTRACT: org ruleset requires this exact check name
+  test:
+    needs: test-run
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check matrix results
+        run: |
+          if [ "${{ needs.test-run.result }}" != "success" ]; then
+            echo "::error::Test matrix failed"
+            exit 1
+          fi
+
+  # ── Required check: lint ────────────────────────────────────────────
+  # CONTRACT: org ruleset requires this exact check name
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -85,12 +103,39 @@ jobs:
       - name: Format check
         run: uv run ruff format --check src/navi_bootstrap/ tests/
 
-      - name: Security scan
-        run: uv run bandit -r src/navi_bootstrap -ll
+  # ── Required check: typecheck ───────────────────────────────────────
+  # CONTRACT: org ruleset requires this exact check name
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
 
       - name: Type check
         run: uv run mypy src/navi_bootstrap/
 
+  # ── Required check: security ────────────────────────────────────────
+  # CONTRACT: org ruleset requires this exact check name
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -101,16 +146,45 @@ jobs:
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
         with:
           egress-policy: audit
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
+
       - name: Set up uv
         uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
         with:
           enable-cache: true
+
       - name: Install dependencies
         run: uv sync
-      - name: pip-audit
+
+      - name: Security scan (bandit)
+        run: uv run bandit -r src/navi_bootstrap -ll
+
+      - name: Audit dependencies (pip-audit)
         run: uvx pip-audit==2.9.0
+
+  # ── Required check: quality-gate ────────────────────────────────────
+  # CONTRACT: org ruleset requires this exact check name
+  quality-gate:
+    needs: [test, lint, typecheck, security]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check all required jobs passed
+        run: |
+          for result in \
+            "${{ needs.test.result }}" \
+            "${{ needs.lint.result }}" \
+            "${{ needs.typecheck.result }}" \
+            "${{ needs.security.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::Required job failed: $result"
+              exit 1
+            fi
+          done
