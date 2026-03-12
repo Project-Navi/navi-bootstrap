@@ -49,7 +49,12 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--spec", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the project spec YAML file")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec YAML file",
+)
 @click.option("--pack", type=str, default=None, help="Name of the template pack to validate")
 def validate(spec: Path, pack: str | None) -> None:
     """Validate a spec (and optionally a pack manifest)."""
@@ -72,9 +77,19 @@ def validate(spec: Path, pack: str | None) -> None:
 
 
 @cli.command("render")
-@click.option("--spec", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the project spec YAML file")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec YAML file",
+)
 @click.option("--pack", required=True, type=str, help="Name of the template pack to render")
-@click.option("--out", type=click.Path(path_type=Path), default=None, help="Output directory (defaults to spec name)")
+@click.option(
+    "--out",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output directory (defaults to spec name)",
+)
 @click.option("--dry-run", is_flag=True, default=False, help="Preview output without writing files")
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
 @click.option("--trust", is_flag=True, default=False, help="Execute hooks from manifest (unsafe)")
@@ -167,7 +182,12 @@ def render_cmd(
 
 
 @cli.command()
-@click.option("--spec", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the project spec YAML file")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec YAML file",
+)
 @click.option("--pack", required=True, type=str, help="Name of the template pack to apply")
 @click.option(
     "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
@@ -271,7 +291,12 @@ def apply(
 
 
 @cli.command("diff")
-@click.option("--spec", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the project spec YAML file")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec YAML file",
+)
 @click.option("--pack", required=True, type=str, help="Name of the template pack to diff")
 @click.option(
     "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
