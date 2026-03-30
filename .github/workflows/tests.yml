@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594  # v2.16.0
         with:
           egress-policy: audit
 
@@ -37,7 +37,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57  # v5.4.2
         with:
           enable-cache: true
 
@@ -49,7 +49,7 @@ jobs:
           uv run pytest tests/ -v --cov=src/navi_bootstrap --cov-report=xml:coverage.xml --cov-report=term-missing --cov-fail-under=80
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: coverage.xml
           fail_ci_if_error: false
@@ -78,7 +78,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594  # v2.16.0
         with:
           egress-policy: audit
 
@@ -90,7 +90,7 @@ jobs:
           python-version: "3.12"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57  # v5.4.2
         with:
           enable-cache: true
 
@@ -112,7 +112,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594  # v2.16.0
         with:
           egress-policy: audit
 
@@ -124,7 +124,7 @@ jobs:
           python-version: "3.12"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57  # v5.4.2
         with:
           enable-cache: true
 
@@ -143,7 +143,7 @@ jobs:
       contents: read
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594  # v2.16.0
         with:
           egress-policy: audit
 
@@ -155,7 +155,7 @@ jobs:
           python-version: "3.12"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098  # v5.4.2
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57  # v5.4.2
         with:
           enable-cache: true
 
