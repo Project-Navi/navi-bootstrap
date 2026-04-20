@@ -15,7 +15,11 @@ build/
 .ruff_cache/
 .coverage
 .dev.vars
-.claude/
+# Claude Code — team automations (agents/skills/hooks/settings.json) are tracked;
+# personal overrides, cache, and logs stay local.
+.claude/settings.local.json
+.claude/cache/
+.claude/logs/
 .serena/
 grippy-data/
 .worktrees/
