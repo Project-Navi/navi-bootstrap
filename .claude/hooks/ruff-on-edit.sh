@@ -22,6 +22,12 @@ esac
 
 # Delegate to pre-commit. The three hooks below are the Python-formatting
 # subset; bandit / detect-secrets / gitleaks run on commit, not on every edit.
+#
+# `pre-commit run` takes a single hook id — trailing positionals after
+# --files are treated as additional file paths, not hook ids. Loop one at
+# a time to run a specific subset.
 command -v pre-commit >/dev/null 2>&1 || exit 0
-pre-commit run --files "$file" ruff ruff-format insert-license >/dev/null 2>&1 || true
+for hook in ruff ruff-format insert-license; do
+  pre-commit run "$hook" --files "$file" >/dev/null 2>&1 || true
+done
 exit 0
