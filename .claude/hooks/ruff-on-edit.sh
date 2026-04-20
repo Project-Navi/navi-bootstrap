@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# PostToolUse hook: format + lint-fix Python files after Edit/Write/MultiEdit.
-# Silent on success; any failure is swallowed so the hook never blocks a tool.
+# PostToolUse hook: delegate Python formatting, linting, and license-header
+# enforcement to pre-commit so they stay lock-step with .pre-commit-config.yaml
+# (pinned ruff SHA, insert-license rules). Single source of truth, no drift.
+#
+# Silent on success; failure is swallowed so the hook never blocks a tool call.
 
 set -u
 
@@ -9,12 +12,16 @@ file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null || true)
 [[ "$file" != *.py ]] && exit 0
 [[ ! -f "$file" ]] && exit 0
 
-# Only operate on files inside this repo's Python source/test trees.
+# Only operate on files inside this repo's Python source/test/fuzz trees.
+# Skips pack template files (packs/*/templates/*.py.j2) which contain Jinja2
+# syntax that ruff would reject.
 case "$file" in
   */src/navi_bootstrap/*|*/tests/*|*/fuzz/*) ;;
   *) exit 0 ;;
 esac
 
-uv run ruff format "$file" >/dev/null 2>&1 || true
-uv run ruff check --fix "$file" >/dev/null 2>&1 || true
+# Delegate to pre-commit. The three hooks below are the Python-formatting
+# subset; bandit / detect-secrets / gitleaks run on commit, not on every edit.
+command -v pre-commit >/dev/null 2>&1 || exit 0
+pre-commit run --files "$file" ruff ruff-format insert-license >/dev/null 2>&1 || true
 exit 0
