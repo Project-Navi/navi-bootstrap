@@ -1,0 +1,13 @@
+# gitleaks configuration for navi-bootstrap
+# Extends the default rule set and allowlists files that legitimately contain
+# hash/fingerprint data that would otherwise match the generic-api-key rule.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "navi-bootstrap false-positive allowlist"
+paths = [
+  # detect-secrets baseline holds SHA-1 fingerprints, not real secrets
+  '''\.secrets\.baseline$''',
+]
