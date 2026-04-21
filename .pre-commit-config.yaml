@@ -54,3 +54,10 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: b69b5157a01fe4234a74a9acd186044152a80c43  # v8.22.1
+    hooks:
+      - id: gitleaks
+        # Path-based allowlist lives in .gitleaks.toml (protect --staged
+        # scans the git diff, so pre-commit exclude: doesn't reach it).
