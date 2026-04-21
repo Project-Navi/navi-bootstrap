@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Check matrix results
         run: |
-          if [ "${{ needs.test-run.result }}" != "success" ]; then
+          if [ "${{ needs['test-run'].result }}" != "success" ]; then
             echo "::error::Test matrix failed"
             exit 1
           fi
