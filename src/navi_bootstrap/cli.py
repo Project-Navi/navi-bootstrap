@@ -53,9 +53,9 @@ def cli() -> None:
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
-    help="Path to the project spec YAML file",
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", type=str, default=None, help="Name of the template pack to validate")
+@click.option("--pack", type=str, default=None, help="Name of the template pack")
 def validate(spec: Path, pack: str | None) -> None:
     """Validate a spec (and optionally a pack manifest)."""
     try:
@@ -81,9 +81,9 @@ def validate(spec: Path, pack: str | None) -> None:
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
-    help="Path to the project spec YAML file",
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str, help="Name of the template pack to render")
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
     "--out",
     type=click.Path(path_type=Path),
@@ -186,9 +186,9 @@ def render_cmd(
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
-    help="Path to the project spec YAML file",
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str, help="Name of the template pack to apply")
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
     "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
 )
@@ -295,9 +295,9 @@ def apply(
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
-    help="Path to the project spec YAML file",
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str, help="Name of the template pack to diff")
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
     "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
 )
