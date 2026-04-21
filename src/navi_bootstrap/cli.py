@@ -302,7 +302,10 @@ def apply(
 )
 @click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
-    "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Project directory whose files will be compared against the rendered output",
 )
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
 def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
