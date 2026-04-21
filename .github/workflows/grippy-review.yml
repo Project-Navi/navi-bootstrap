@@ -15,7 +15,14 @@ permissions:
 jobs:
   review:
     name: Grippy Code Review
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    # Skip fork PRs (no secrets access) and dependabot/bot PRs
+    # (Actions secrets are not exposed to dependabot-triggered workflows).
+    if: >-
+      ${{
+        github.event.pull_request.head.repo.full_name == github.repository
+        && github.actor != 'dependabot[bot]'
+        && !endsWith(github.actor, '[bot]')
+      }}
     runs-on: ubuntu-latest
     steps:
       - uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc  # v2.15.1
