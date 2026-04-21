@@ -27,9 +27,13 @@ def run_hooks(hooks: list[str], working_dir: Path) -> list[HookResult]:
 
     for command in hooks:
         try:
+            # shell=True is required: manifest hooks are arbitrary shell one-liners
+            # (pipes, redirects, &&). Executed only when the user opts in via --trust
+            # at the CLI boundary — see cli.py.
             result = subprocess.run(
                 command,
-                shell=True,  # nosec B602  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                shell=True,  # nosec B602
                 capture_output=True,
                 text=True,
                 cwd=working_dir,

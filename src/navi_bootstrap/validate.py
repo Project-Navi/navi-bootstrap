@@ -39,9 +39,13 @@ def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> lis
         expect = v.get("expect", "exit_code_0")
 
         try:
+            # shell=True is required: manifest validations are arbitrary shell
+            # one-liners (exit-code checks, pipes, &&). Executed only when the user
+            # opts in via --trust at the CLI boundary — see cli.py.
             result = subprocess.run(
                 command,
-                shell=True,  # nosec B602  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                shell=True,  # nosec B602
                 capture_output=True,
                 text=True,
                 cwd=working_dir,
