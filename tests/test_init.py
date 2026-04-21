@@ -449,6 +449,14 @@ class TestDetectTestInfo:
         result = detect_test_info(tmp_path)
         assert result["test_count"] == 1
 
+    def test_detects_async_test_functions(self, tmp_path: Path) -> None:
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        test_file = tests / "test_example.py"
+        test_file.write_text("def test_sync(): pass\nasync def test_async(): pass\n")
+        result = detect_test_info(tmp_path)
+        assert result["test_count"] == 2
+
 
 # ---------------------------------------------------------------------------
 # TestInspectProject
