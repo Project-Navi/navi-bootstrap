@@ -190,7 +190,10 @@ def render_cmd(
 )
 @click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
-    "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Existing project directory to apply changes to",
 )
 @click.option("--dry-run", is_flag=True, default=False, help="Preview output without writing files")
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
