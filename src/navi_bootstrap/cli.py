@@ -53,8 +53,9 @@ def cli() -> None:
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", type=str, default=None)
+@click.option("--pack", type=str, default=None, help="Name of the template pack")
 def validate(spec: Path, pack: str | None) -> None:
     """Validate a spec (and optionally a pack manifest)."""
     try:
@@ -80,14 +81,16 @@ def validate(spec: Path, pack: str | None) -> None:
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str)
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
     "--out",
     type=click.Path(path_type=Path),
     default=None,
+    help="Output directory (defaults to spec name)",
 )
-@click.option("--dry-run", is_flag=True, default=False)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview output without writing files")
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
 @click.option("--trust", is_flag=True, default=False, help="Execute hooks from manifest (unsafe)")
 def render_cmd(
@@ -183,12 +186,16 @@ def render_cmd(
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str)
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
-    "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Existing project directory to apply changes to",
 )
-@click.option("--dry-run", is_flag=True, default=False)
+@click.option("--dry-run", is_flag=True, default=False, help="Preview output without writing files")
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
 @click.option(
     "--trust", is_flag=True, default=False, help="Execute hooks/validations from manifest (unsafe)"
@@ -291,10 +298,14 @@ def apply(
     "--spec",
     required=True,
     type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
 )
-@click.option("--pack", required=True, type=str)
+@click.option("--pack", required=True, type=str, help="Name of the template pack")
 @click.option(
-    "--target", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path)
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Project directory whose files will be compared against the rendered output",
 )
 @click.option("--skip-resolve", is_flag=True, default=False, help="Skip SHA resolution (offline)")
 def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
