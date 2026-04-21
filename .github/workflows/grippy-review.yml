@@ -15,13 +15,19 @@ permissions:
 jobs:
   review:
     name: Grippy Code Review
-    # Skip fork PRs (no secrets access) and dependabot/bot PRs
-    # (Actions secrets are not exposed to dependabot-triggered workflows).
+    # Skip (a) fork PRs and (b) bot-authored PRs. Both categories are
+    # denied access to Actions secrets by GitHub, so OPENAI_API_KEY is
+    # unavailable and Grippy cannot run.
+    #
+    # Using github.event.pull_request.user.* rather than github.actor:
+    # the PR author is stable across pushes, re-runs, and maintainer
+    # commits onto the branch, whereas github.actor reflects whoever
+    # triggered the current run.
     if: >-
       ${{
         github.event.pull_request.head.repo.full_name == github.repository
-        && github.actor != 'dependabot[bot]'
-        && !endsWith(github.actor, '[bot]')
+        && github.event.pull_request.user.login != 'dependabot[bot]'
+        && github.event.pull_request.user.type != 'Bot'
       }}
     runs-on: ubuntu-latest
     steps:
