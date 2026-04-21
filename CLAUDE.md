@@ -18,9 +18,18 @@ This file provides guidance to Claude Code when working with code in this reposi
 src/
   navi_bootstrap/   # 12 modules — engine, CLI, spec, manifest, resolve, validate, diff, hooks, init, sanitize, packs
 packs/              # 8 template packs — scaffold, base, code-hygiene, github-templates, quality-gates, release-pipeline, review-system, security-scanning
-tests/              # test files including adversarial/ suite
-.github/workflows/  # CI: tests, CodeQL, scorecard, release
+tests/              # unit/integration + adversarial/ suite (unicode-hostile, path-traversal, template-injection)
+schema/             # JSON Schema for spec + manifest (force-included in wheel)
+fuzz/               # atheris fuzz harness (fuzz_sanitize.py)
+docs/               # zensical documentation site
+.github/workflows/  # 8 workflows — see CI Pipeline below
 ```
+
+### Pipeline (engine stages)
+
+`spec + pack → [0 Resolve] → [1 Validate] → [2 Plan] → [3 Render] → [4 Validate] → [5 Hooks] → output`
+
+Stages 0-3 are pure. All project opinions live in the spec/pack, never the engine.
 
 ## Development Commands
 
@@ -55,19 +64,34 @@ uv run ruff format --check src/navi_bootstrap/ tests/ && \
 pre-commit run --all-files
 ```
 
+### Dev loop for CLI/pack changes
+
+```bash
+# Exercise the CLI without installing
+uv run nboot new /tmp/demo
+uv run nboot apply --spec nboot-spec.json --pack security-scanning --target /tmp/demo
+uv run nboot diff  --spec nboot-spec.json --pack base              --target /tmp/demo
+```
+
 ## Code Quality Standards
 
 - Line length: 100 characters
 - Linter: ruff (select: E, F, I, N, W, UP, B, RUF, C4)
 - Type checking: mypy (strict mode)
-- Security: bandit, detect-secrets with baseline
+- Security: bandit, detect-secrets (baseline in `.secrets.baseline`), gitleaks
 - License headers: SPDX `MIT` enforced via pre-commit on `.py` files
+- First-party dep: `navi-sanitize` — all user input flows through it (homoglyphs, traversal, injection)
 
 ## CI Pipeline
 
-- **tests.yml** — pytest, ruff, mypy on every PR
+- **tests.yml** — pytest on 3.12 & 3.13; ruff + mypy + bandit on 3.12; aggregates to `test` + `quality-gate` required checks
 - **codeql.yml** — GitHub CodeQL security scanning
-- **scorecard.yml** — OSSF scorecard
+- **scorecard.yml** — OSSF Scorecard
+- **semgrep.yml** — SAST rules
+- **grippy-review.yml** — code review bot (skips fork/bot-authored PRs)
+- **fuzz.yml** — atheris fuzz harness
+- **docs.yml** — zensical docs build/deploy
+- **release.yml** — SLSA L3 release pipeline (on tag push: `v*`)
 
 ## Commit Conventions
 
