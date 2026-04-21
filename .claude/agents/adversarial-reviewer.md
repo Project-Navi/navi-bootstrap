@@ -1,6 +1,6 @@
 ---
 name: adversarial-reviewer
-description: Reviews changes to sanitizer, engine, packs, or spec modules for unicode-hostile, path-traversal, and template-injection attack classes. Use PROACTIVELY after any change to sanitize.py, engine.py, packs.py, spec.py, or files in tests/adversarial/.
+description: Review changes for unicode-hostile, path-traversal, and template-injection attacks. Use PROACTIVELY after sanitize.py, engine.py, packs.py, spec.py, or tests/adversarial/ edits.
 tools: Read, Grep, Glob, Bash
 ---
 

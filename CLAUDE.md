@@ -84,14 +84,14 @@ uv run nboot diff  --spec nboot-spec.json --pack base              --target /tmp
 
 ## CI Pipeline
 
-- **tests.yml** — pytest + ruff + mypy on 3.12 & 3.13 (required check)
+- **tests.yml** — pytest on 3.12 & 3.13; ruff + mypy + bandit on 3.12; aggregates to `test` + `quality-gate` required checks
 - **codeql.yml** — GitHub CodeQL security scanning
 - **scorecard.yml** — OSSF Scorecard
 - **semgrep.yml** — SAST rules
-- **grippy-review.yml** — code review bot
+- **grippy-review.yml** — code review bot (skips fork/bot-authored PRs)
 - **fuzz.yml** — atheris fuzz harness
 - **docs.yml** — zensical docs build/deploy
-- **release.yml** — SLSA L3 release pipeline (manual dispatch)
+- **release.yml** — SLSA L3 release pipeline (on tag push: `v*`)
 
 ## Commit Conventions
 
