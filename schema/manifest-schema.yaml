@@ -46,6 +46,7 @@ properties:
     type: array
     items:
       type: string
+      minLength: 1
   # Agent-workflow fields (engine ignores, but schema allows)
   dependencies:
     type: array
@@ -67,6 +68,27 @@ properties:
           type: string
   validation:
     type: array
+    items:
+      type: object
+      properties:
+        description:
+          type: string
+        command:
+          type: string
+          minLength: 1
+        method:
+          type: string
+          minLength: 1
+        expect:
+          type: string
+          enum: [exit_code_0, exit_code_0_or_warnings]
+      # Exactly one of: a shell command OR a named method (handled in-process).
+      # oneOf rather than anyOf so a manifest can't declare both and leave the
+      # engine silently picking 'command' and ignoring 'method'.
+      oneOf:
+        - required: [command]
+        - required: [method]
+      additionalProperties: false
   decisions:
     type: array
 additionalProperties: true

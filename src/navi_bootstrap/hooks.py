@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,15 +22,38 @@ class HookResult:
     returncode: int = 0
 
 
-def run_hooks(hooks: list[str], working_dir: Path) -> list[HookResult]:
-    """Run hook commands sequentially. Reports failures but does not stop."""
+def run_hooks(hooks: Sequence[object], working_dir: Path) -> list[HookResult]:
+    """Run hook commands sequentially. Reports failures but does not stop.
+
+    Items are expected to be strings per the manifest schema; non-string items
+    (from a malformed manifest that bypassed schema validation) return a failed
+    HookResult rather than crashing subprocess.run.
+    """
     results: list[HookResult] = []
 
     for command in hooks:
+        # Defensive type check: schema validation should catch non-string entries
+        # at Stage 1, but the engine runs even if the manifest was not re-validated.
+        # Return a failed result rather than crashing subprocess.run.
+        if not isinstance(command, str):
+            results.append(
+                HookResult(
+                    command=repr(command),
+                    success=False,
+                    stderr=f"Invalid hook type: expected str, got {type(command).__name__}",
+                    returncode=-1,
+                )
+            )
+            continue
+
         try:
+            # shell=True is required: manifest hooks are arbitrary shell one-liners
+            # (pipes, redirects, &&). Executed only when the user opts in via --trust
+            # at the CLI boundary — see cli.py.
             result = subprocess.run(
                 command,
-                shell=True,  # nosec B602  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                shell=True,  # nosec B602
                 capture_output=True,
                 text=True,
                 cwd=working_dir,

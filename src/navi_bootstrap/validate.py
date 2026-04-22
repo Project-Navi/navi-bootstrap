@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -23,11 +23,29 @@ class ValidationResult:
     returncode: int = 0
 
 
-def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> list[ValidationResult]:
-    """Run validation commands and return results."""
+def run_validations(validations: Sequence[object], working_dir: Path) -> list[ValidationResult]:
+    """Run validation commands and return results.
+
+    Items are expected to be dicts per the manifest schema; non-dict items or
+    items with non-string ``command`` (from a malformed manifest that bypassed
+    schema validation) return a failed ValidationResult rather than crashing.
+    """
     results: list[ValidationResult] = []
 
     for v in validations:
+        # Defensive type check: schema validation should catch non-dict entries
+        # at Stage 1, but the engine runs even if the manifest was not re-validated.
+        if not isinstance(v, dict):
+            results.append(
+                ValidationResult(
+                    description=f"invalid entry ({type(v).__name__})",
+                    passed=False,
+                    stderr=f"Invalid validation entry: expected dict, got {type(v).__name__}",
+                    returncode=-1,
+                )
+            )
+            continue
+
         description = v.get("description", "unnamed")
 
         # Skip method-based validations (handled elsewhere)
@@ -35,13 +53,30 @@ def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> lis
             results.append(ValidationResult(description=description, passed=False, skipped=True))
             continue
 
-        command = v["command"]
+        command = v.get("command")
+        if not isinstance(command, str):
+            results.append(
+                ValidationResult(
+                    description=description,
+                    passed=False,
+                    stderr=(
+                        f"Invalid validation command: expected str, got {type(command).__name__}"
+                    ),
+                    returncode=-1,
+                )
+            )
+            continue
+
         expect = v.get("expect", "exit_code_0")
 
         try:
+            # shell=True is required: manifest validations are arbitrary shell
+            # one-liners (exit-code checks, pipes, &&). Executed only when the user
+            # opts in via --trust at the CLI boundary — see cli.py.
             result = subprocess.run(
                 command,
-                shell=True,  # nosec B602  # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                # nosemgrep: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+                shell=True,  # nosec B602
                 capture_output=True,
                 text=True,
                 cwd=working_dir,
