@@ -395,6 +395,56 @@ class TestAuditCli:
         assert result.exit_code == 0
         assert "drift" in result.output.lower() or "missing" in result.output.lower()
 
+    def test_diff_cmd_friendly_error_on_confinement(self, tmp_path: Path) -> None:
+        """Regression: `nboot diff` must turn compute_diffs's path-confinement
+        ValueError into a ClickException (one-line error), not a bare
+        traceback. Codex stop-time review flagged 5fe1668 as introducing an
+        uncaught ValueError in diff_cmd.
+        """
+        # Build a symlink-escape target and monkey-patch the engine's render
+        # step to emit a dest hitting it. Exercises the same boundary as audit
+        # but via the `diff` CLI verb.
+        import navi_bootstrap.cli as cli_mod
+        from navi_bootstrap.engine import RenderedFile
+
+        secret_area = tmp_path / "outside"
+        secret_area.mkdir()
+        (secret_area / "secret.txt").write_text("leaked")
+        target = tmp_path / "target"
+        target.mkdir()
+        escape = target / "escape.txt"
+        escape.symlink_to(secret_area / "secret.txt")
+
+        spec = _write_spec(tmp_path)
+
+        def _hostile_render_to_files(*args, **kwargs):  # type: ignore[no-untyped-def]
+            return [RenderedFile(dest="escape.txt", content="x", mode="create")]
+
+        original = cli_mod.render_to_files
+        cli_mod.render_to_files = _hostile_render_to_files
+        try:
+            runner = CliRunner()
+            result = runner.invoke(
+                cli,
+                [
+                    "diff",
+                    "--spec",
+                    str(spec),
+                    "--pack",
+                    "scaffold",
+                    "--target",
+                    str(target),
+                    "--skip-resolve",
+                ],
+            )
+        finally:
+            cli_mod.render_to_files = original
+
+        # ClickException exits 1 with a clean 'Error: ...' line, no traceback.
+        assert result.exit_code == 1
+        assert "Path confinement error" in result.output
+        assert "Traceback" not in result.output
+
     def test_pipeline_error_exits_with_code_2(self, tmp_path: Path) -> None:
         """AuditError must exit 2, not 1, so CI can tell drift apart from
         pipeline failure. Never suppressed by --exit-zero."""

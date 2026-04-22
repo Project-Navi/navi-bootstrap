@@ -357,8 +357,13 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
     except (jinja2.TemplateError, TypeError) as e:
         raise click.ClickException(f"Template error: {e}") from e
 
-    # Compute diffs
-    diffs = compute_diffs(rendered_files, target, pack_name=render_plan.pack_name)
+    # Compute diffs — path-confinement violations surface as ValueError from
+    # compute_diffs; convert to a clean ClickException so users see a one-line
+    # error instead of a Python traceback on crafted / symlinked targets.
+    try:
+        diffs = compute_diffs(rendered_files, target, pack_name=render_plan.pack_name)
+    except ValueError as e:
+        raise click.ClickException(f"Path confinement error: {e}") from e
 
     if not diffs:
         click.echo("No changes — target is up to date.")

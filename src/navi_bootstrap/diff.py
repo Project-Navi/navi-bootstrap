@@ -89,12 +89,6 @@ def compute_diffs(
 
         is_new = not file_path.exists()
 
-        # Post-existence symlink defense: a pre-existing symlink at
-        # file_path that points outside target would otherwise let a
-        # crafted pack read an arbitrary file during the diff.
-        if not is_new and file_path.resolve() != (target / rf.dest).resolve():
-            raise ValueError(f"Path escapes outside target directory (symlink): {rf.dest}")
-
         if is_new:
             # New file: diff against empty
             # For append mode, wrap in marker blocks like the engine would
