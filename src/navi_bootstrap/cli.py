@@ -14,6 +14,8 @@ from typing import Any
 import click
 import jinja2
 
+from navi_bootstrap import __version__
+from navi_bootstrap.audit import AuditError, findings_to_sarif, findings_to_text, run_audit
 from navi_bootstrap.diff import compute_diffs
 from navi_bootstrap.engine import plan, render, render_to_files
 from navi_bootstrap.hooks import run_hooks
@@ -369,6 +371,90 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
     n = len(diffs)
     click.echo(f"\n{n} file{'s' if n != 1 else ''} would change.")
     raise SystemExit(1)
+
+
+@cli.command("audit")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
+)
+@click.option("--pack", required=True, type=str, help="Name of the conformance pack")
+@click.option(
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Project directory to audit against the pack",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "sarif"]),
+    default="text",
+    help="Report format (text for humans, sarif for GitHub Security tab)",
+)
+@click.option(
+    "--output",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Write report to this file instead of stdout",
+)
+@click.option(
+    "--resolve",
+    is_flag=True,
+    default=False,
+    help="Resolve action SHAs via gh before planning (default: offline)",
+)
+@click.option(
+    "--exit-zero",
+    is_flag=True,
+    default=False,
+    help="Exit 0 even when drift is found (report-only mode for CI surveys)",
+)
+def audit_cmd(
+    spec: Path,
+    pack: str,
+    target: Path,
+    output_format: str,
+    output: Path | None,
+    resolve: bool,
+    exit_zero: bool,
+) -> None:
+    """Audit a project against a pack for conformance drift.
+
+    Reports files that are missing or drifted relative to what the pack would
+    render. Supports --format=sarif for upload to GitHub's Security tab via
+    github/codeql-action/upload-sarif.
+
+    Exits 0 when the target fully conforms; exits 1 when drift is found
+    (override with --exit-zero for report-only CI surveys).
+    """
+    # Offline by default — conformance audits shouldn't depend on network.
+    skip_resolve = not resolve
+    if resolve and not gh_available():
+        click.echo(_GH_NOTICE, err=True)
+        skip_resolve = True
+
+    try:
+        findings = run_audit(spec, pack, target, skip_resolve=skip_resolve)
+    except AuditError as e:
+        raise click.ClickException(str(e)) from e
+
+    if output_format == "sarif":
+        report = findings_to_sarif(findings, tool_name="nboot-audit", tool_version=__version__)
+        rendered = report.to_json()
+    else:
+        rendered = findings_to_text(findings)
+
+    if output is None:
+        click.echo(rendered)
+    else:
+        output.write_text(rendered if rendered.endswith("\n") else rendered + "\n")
+        click.echo(f"Wrote {len(findings)} finding(s) to {output}", err=True)
+
+    if findings and not exit_zero:
+        raise SystemExit(1)
 
 
 @cli.command("list-packs")
