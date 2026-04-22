@@ -136,10 +136,15 @@ def run_audit(
     except (jinja2.TemplateError, TypeError) as e:
         raise AuditError(f"Template render error: {e}") from e
 
-    # Diff rendered-in-memory vs existing target filesystem.
-    diffs = compute_diffs(rendered, target, pack_name=pack)
+    # Use the manifest's canonical pack name (what `apply` writes into append
+    # marker blocks), NOT the raw CLI arg — `resolve_pack` accepts a filesystem
+    # path and the two forms should not affect drift detection.
+    canonical_pack_name = render_plan.pack_name
 
-    return [_diff_result_to_finding(d, pack) for d in diffs]
+    # Diff rendered-in-memory vs existing target filesystem.
+    diffs = compute_diffs(rendered, target, pack_name=canonical_pack_name)
+
+    return [_diff_result_to_finding(d, canonical_pack_name) for d in diffs]
 
 
 def findings_to_sarif(

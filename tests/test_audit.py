@@ -232,6 +232,57 @@ class TestRunAudit:
         with pytest.raises(AuditError):
             run_audit(spec, "no-such-pack-here", target, skip_resolve=True)
 
+    def test_pack_filesystem_path_does_not_cause_false_append_drift(self, tmp_path: Path) -> None:
+        """resolve_pack() accepts a filesystem path, but the append-mode
+        marker block is keyed by the manifest's canonical pack name (what
+        apply() writes). run_audit must use the canonical name when diffing,
+        otherwise append-mode files are reported as drifted just because the
+        CLI arg was a path rather than a bare name.
+
+        Regression guard for Codex stop-time review finding.
+        """
+        from navi_bootstrap.engine import plan, render_to_files, write_rendered
+        from navi_bootstrap.manifest import load_manifest
+        from navi_bootstrap.packs import resolve_pack
+        from navi_bootstrap.sanitize import sanitize_manifest, sanitize_spec
+        from navi_bootstrap.spec import load_spec
+
+        spec = _write_spec(tmp_path)
+        target = tmp_path / "applied"
+        target.mkdir()
+
+        # Pick the base pack — it has append-mode entries in its manifest.
+        pack_dir = resolve_pack("base")
+        spec_data = sanitize_spec(load_spec(spec))
+        manifest = sanitize_manifest(load_manifest(pack_dir / "manifest.yaml"))
+        render_plan = plan(manifest, spec_data, pack_dir / "templates")
+
+        # Guard: test is only meaningful when the pack actually has append
+        # entries; skip otherwise so the suite stays green if base is edited.
+        if not any(e.mode == "append" for e in render_plan.entries):
+            pytest.skip("base pack has no append-mode entries; regression not reproducible")
+
+        rendered = render_to_files(
+            render_plan,
+            spec_data,
+            pack_dir / "templates",
+            action_shas={},
+            action_versions={},
+        )
+        # apply() uses the canonical manifest name for marker blocks.
+        write_rendered(rendered, target, pack_name=render_plan.pack_name)
+
+        # Now audit passing the FILESYSTEM PATH as the pack argument.
+        # Before the fix this produced false drift on every append-mode file.
+        findings_by_path = run_audit(spec, str(pack_dir), target, skip_resolve=True)
+        findings_by_name = run_audit(spec, "base", target, skip_resolve=True)
+
+        assert findings_by_path == findings_by_name
+        assert findings_by_path == [], (
+            "Expected no drift when auditing a just-applied pack via filesystem "
+            f"path, got: {findings_by_path}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # CLI integration
