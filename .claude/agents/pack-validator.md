@@ -1,6 +1,6 @@
 ---
 name: pack-validator
-description: Validates pack changes by running nboot validate, nboot diff, and pack-specific tests. Use after any modification to packs/<name>/ to catch render regressions before review.
+description: Validate pack changes: runs nboot validate/diff + pack tests. Use after any packs/<name>/ edit.
 tools: Read, Bash, Grep, Glob
 ---
 
