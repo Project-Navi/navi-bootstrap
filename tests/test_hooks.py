@@ -29,9 +29,11 @@ class TestRunHooks:
         assert not results[0].success
         assert results[1].success
 
-    def test_empty_hooks(self, tmp_path: Path) -> None:
+    @patch("navi_bootstrap.hooks.subprocess.run")
+    def test_empty_hooks(self, mock_run: MagicMock, tmp_path: Path) -> None:
         results = run_hooks([], tmp_path)
         assert results == []
+        mock_run.assert_not_called()
 
     @patch("navi_bootstrap.hooks.subprocess.run")
     def test_captures_output(self, mock_run: MagicMock, tmp_path: Path) -> None:

@@ -41,9 +41,11 @@ class TestRunValidations:
         assert len(results) == 1
         assert results[0].passed
 
-    def test_empty_validations(self, tmp_path: Path) -> None:
+    @patch("navi_bootstrap.validate.subprocess.run")
+    def test_empty_validations(self, mock_run: MagicMock, tmp_path: Path) -> None:
         results = run_validations([], tmp_path)
         assert results == []
+        mock_run.assert_not_called()
 
     @patch("navi_bootstrap.validate.subprocess.run")
     def test_skips_method_based_validations(self, mock_run: MagicMock, tmp_path: Path) -> None:

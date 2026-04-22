@@ -17,18 +17,20 @@ You are a pack-validation specialist for navi-bootstrap. Your job: confirm that 
 2. For each changed pack, run the full validation chain:
 
    ```bash
-   uv run nboot validate --spec nboot-spec.json
-   scratch=$(mktemp -d -t nboot-scratch-XXXX)
-   uv run nboot new "$scratch"
-   uv run nboot apply --spec nboot-spec.json --pack <PACK> --target "$scratch"
-   uv run nboot diff  --spec nboot-spec.json --pack <PACK> --target "$scratch"
+   for PACK in $(git diff --name-only origin/main...HEAD | grep '^packs/' | cut -d'/' -f2 | sort -u); do
+     uv run nboot validate --spec nboot-spec.json
+     scratch=$(mktemp -d -t nboot-scratch-XXXX)
+     uv run nboot new "$scratch"
+     uv run nboot apply --spec nboot-spec.json --pack "$PACK" --target "$scratch"
+     uv run nboot diff  --spec nboot-spec.json --pack "$PACK" --target "$scratch"
+   done
    ```
 
 3. Run the pack-specific test:
 
    ```bash
-   pack_snake=$(echo <PACK> | tr '-' '_')
-   uv run pytest tests/test_${pack_snake}_pack.py -v 2>/dev/null || \
+   pack_snake=$(echo "$PACK" | tr '-' '_')
+   uv run pytest tests/test_${pack_snake}_pack.py -v || \
      uv run pytest tests/ -k "$pack_snake" -v
    ```
 

@@ -116,12 +116,20 @@ def render_cmd(
 
     if out is None:
         name = spec_data["name"]
-        if not name or "/" in name or "\\" in name:
+        stripped_name = name.strip() if isinstance(name, str) else ""
+        if (
+            not stripped_name
+            or "/" in stripped_name
+            or "\\" in stripped_name
+            or ".." in stripped_name
+            or stripped_name.startswith(".")
+        ):
             raise click.ClickException(
                 f"Unsafe spec name {name!r} cannot be used as output directory. "
+                "Name must be a non-empty single path segment without '.' or '..' components. "
                 "Use --out to specify an explicit output path."
             )
-        output_dir = Path(name)
+        output_dir = Path(stripped_name)
     else:
         output_dir = out
 
@@ -459,12 +467,13 @@ def new(
 ) -> None:
     """Create a new Python project with operational infrastructure."""
     # Validate name before using as path
-    if not name or "/" in name or "\\" in name or name.startswith("."):
+    stripped_name = name.strip() if name else ""
+    if not stripped_name or "/" in stripped_name or "\\" in stripped_name or ".." in stripped_name or stripped_name.startswith("."):
         raise click.ClickException(
             f"Unsafe project name {name!r}. "
-            "Names must not contain path separators or start with a dot."
+            "Names must not contain path separators, '..', or start with a dot."
         )
-    output_dir = Path(name)
+    output_dir = Path(stripped_name)
     if output_dir.exists():
         raise click.ClickException(
             f"Directory {name!r} already exists. nboot new is for greenfield projects only."
