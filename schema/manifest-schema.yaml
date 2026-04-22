@@ -82,8 +82,10 @@ properties:
         expect:
           type: string
           enum: [exit_code_0, exit_code_0_or_warnings]
-      # Either a shell command OR a named method (handled in-process) is required
-      anyOf:
+      # Exactly one of: a shell command OR a named method (handled in-process).
+      # oneOf rather than anyOf so a manifest can't declare both and leave the
+      # engine silently picking 'command' and ignoring 'method'.
+      oneOf:
         - required: [command]
         - required: [method]
       additionalProperties: false

@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -23,8 +23,13 @@ class ValidationResult:
     returncode: int = 0
 
 
-def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> list[ValidationResult]:
-    """Run validation commands and return results."""
+def run_validations(validations: Sequence[object], working_dir: Path) -> list[ValidationResult]:
+    """Run validation commands and return results.
+
+    Items are expected to be dicts per the manifest schema; non-dict items or
+    items with non-string ``command`` (from a malformed manifest that bypassed
+    schema validation) return a failed ValidationResult rather than crashing.
+    """
     results: list[ValidationResult] = []
 
     for v in validations:

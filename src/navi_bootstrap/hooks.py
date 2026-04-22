@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,8 +22,13 @@ class HookResult:
     returncode: int = 0
 
 
-def run_hooks(hooks: list[str], working_dir: Path) -> list[HookResult]:
-    """Run hook commands sequentially. Reports failures but does not stop."""
+def run_hooks(hooks: Sequence[object], working_dir: Path) -> list[HookResult]:
+    """Run hook commands sequentially. Reports failures but does not stop.
+
+    Items are expected to be strings per the manifest schema; non-string items
+    (from a malformed manifest that bypassed schema validation) return a failed
+    HookResult rather than crashing subprocess.run.
+    """
     results: list[HookResult] = []
 
     for command in hooks:
