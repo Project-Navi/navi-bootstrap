@@ -26,6 +26,20 @@ def run_hooks(hooks: list[str], working_dir: Path) -> list[HookResult]:
     results: list[HookResult] = []
 
     for command in hooks:
+        # Defensive type check: schema validation should catch non-string entries
+        # at Stage 1, but the engine runs even if the manifest was not re-validated.
+        # Return a failed result rather than crashing subprocess.run.
+        if not isinstance(command, str):
+            results.append(
+                HookResult(
+                    command=repr(command),
+                    success=False,
+                    stderr=f"Invalid hook type: expected str, got {type(command).__name__}",
+                    returncode=-1,
+                )
+            )
+            continue
+
         try:
             # shell=True is required: manifest hooks are arbitrary shell one-liners
             # (pipes, redirects, &&). Executed only when the user opts in via --trust

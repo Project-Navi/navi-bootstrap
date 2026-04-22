@@ -28,6 +28,19 @@ def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> lis
     results: list[ValidationResult] = []
 
     for v in validations:
+        # Defensive type check: schema validation should catch non-dict entries
+        # at Stage 1, but the engine runs even if the manifest was not re-validated.
+        if not isinstance(v, dict):
+            results.append(
+                ValidationResult(
+                    description=f"invalid entry ({type(v).__name__})",
+                    passed=False,
+                    stderr=f"Invalid validation entry: expected dict, got {type(v).__name__}",
+                    returncode=-1,
+                )
+            )
+            continue
+
         description = v.get("description", "unnamed")
 
         # Skip method-based validations (handled elsewhere)
@@ -35,7 +48,20 @@ def run_validations(validations: list[dict[str, Any]], working_dir: Path) -> lis
             results.append(ValidationResult(description=description, passed=False, skipped=True))
             continue
 
-        command = v["command"]
+        command = v.get("command")
+        if not isinstance(command, str):
+            results.append(
+                ValidationResult(
+                    description=description,
+                    passed=False,
+                    stderr=(
+                        f"Invalid validation command: expected str, got {type(command).__name__}"
+                    ),
+                    returncode=-1,
+                )
+            )
+            continue
+
         expect = v.get("expect", "exit_code_0")
 
         try:
