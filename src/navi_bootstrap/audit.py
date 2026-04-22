@@ -141,8 +141,13 @@ def run_audit(
     # path and the two forms should not affect drift detection.
     canonical_pack_name = render_plan.pack_name
 
-    # Diff rendered-in-memory vs existing target filesystem.
-    diffs = compute_diffs(rendered, target, pack_name=canonical_pack_name)
+    # Diff rendered-in-memory vs existing target filesystem. compute_diffs
+    # raises ValueError on path-confinement / symlink-escape; surface that as
+    # an AuditError so callers get one error type.
+    try:
+        diffs = compute_diffs(rendered, target, pack_name=canonical_pack_name)
+    except ValueError as e:
+        raise AuditError(f"Path confinement error: {e}") from e
 
     return [_diff_result_to_finding(d, canonical_pack_name) for d in diffs]
 

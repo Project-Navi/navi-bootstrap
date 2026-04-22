@@ -30,7 +30,8 @@ from navi_bootstrap.validate import run_validations
 _GH_NOTICE = (
     "Notice: gh CLI not found — SHA resolution requires gh "
     "(https://cli.github.com).\n"
-    "  Action SHAs left as placeholders. Re-run without --skip-resolve after installing gh."
+    "  Continuing with placeholder action SHAs. Install gh to enable "
+    "full SHA resolution."
 )
 
 
@@ -439,7 +440,11 @@ def audit_cmd(
     try:
         findings = run_audit(spec, pack, target, skip_resolve=skip_resolve)
     except AuditError as e:
-        raise click.ClickException(str(e)) from e
+        # Exit 2 (distinct from drift=1) so CI can tell "audit ran; drift
+        # found" apart from "audit failed to run". Never suppressed by
+        # --exit-zero since pipeline errors must always be visible.
+        click.echo(f"Audit pipeline error: {e}", err=True)
+        raise SystemExit(2) from e
 
     if output_format == "sarif":
         report = findings_to_sarif(findings, tool_name="nboot-audit", tool_version=__version__)

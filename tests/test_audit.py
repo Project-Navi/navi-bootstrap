@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -146,36 +145,15 @@ class TestRunAudit:
         assert all(f.pack == "scaffold" for f in findings)
 
     def test_conforming_target_has_no_findings(self, tmp_path: Path) -> None:
-        # Run nboot new to produce a conforming project, then audit it against
-        # scaffold — expect zero findings (full conformance).
-        spec = _write_spec(tmp_path)
-        target = tmp_path / "conforming"
-        subprocess.run(
-            [
-                "uv",
-                "run",
-                "nboot",
-                "apply",
-                "--spec",
-                str(spec),
-                "--pack",
-                "scaffold",
-                "--target",
-                str(target),
-                "--skip-resolve",
-            ],
-            check=False,
-            capture_output=True,
-            cwd=Path(__file__).resolve().parents[1],
-        )
-        # Engine's apply refuses to write to a non-existent target, so pre-create.
-        # Instead we use render/apply via the engine directly:
+        # Render scaffold in-process, then audit it — expect zero findings.
         from navi_bootstrap.engine import plan, render_to_files, write_rendered
         from navi_bootstrap.manifest import load_manifest
         from navi_bootstrap.packs import resolve_pack
         from navi_bootstrap.sanitize import sanitize_manifest, sanitize_spec
         from navi_bootstrap.spec import load_spec
 
+        spec = _write_spec(tmp_path)
+        target = tmp_path / "conforming"
         target.mkdir()
         pack_dir = resolve_pack("scaffold")
         spec_data = sanitize_spec(load_spec(spec))
@@ -284,6 +262,74 @@ class TestRunAudit:
         )
 
 
+class TestAuditPathConfinement:
+    """compute_diffs (via run_audit) must refuse to read outside the target.
+
+    Qodo code-review finding on PR #51: the audit read boundary must be at
+    least as strict as the engine's write boundary — a crafted pack/spec
+    with a traversal, absolute path, or symlink pointing outside the target
+    should raise rather than silently read arbitrary files.
+    """
+
+    def test_symlink_escape_is_rejected(self, tmp_path: Path) -> None:
+        from navi_bootstrap.diff import compute_diffs
+        from navi_bootstrap.engine import RenderedFile
+
+        secret_area = tmp_path / "outside"
+        secret_area.mkdir()
+        (secret_area / "secret.txt").write_text("leaked")
+
+        target = tmp_path / "target"
+        target.mkdir()
+        # A symlink inside target pointing at the secret file outside target.
+        escape = target / "escape.txt"
+        escape.symlink_to(secret_area / "secret.txt")
+
+        # A crafted pack "render" whose dest is the symlink.
+        rendered = [RenderedFile(dest="escape.txt", content="anything", mode="create")]
+
+        with pytest.raises(ValueError, match="escapes outside target"):
+            compute_diffs(rendered, target, pack_name="crafted")
+
+    def test_traversal_dest_is_rejected(self, tmp_path: Path) -> None:
+        from navi_bootstrap.diff import compute_diffs
+        from navi_bootstrap.engine import RenderedFile
+
+        target = tmp_path / "target"
+        target.mkdir()
+        # Crafted pack with a '..' escape in dest.
+        rendered = [
+            RenderedFile(dest="../escaped.txt", content="x", mode="create"),
+        ]
+        with pytest.raises(ValueError, match="escapes outside target"):
+            compute_diffs(rendered, target, pack_name="crafted")
+
+    def test_confinement_violation_surfaces_as_audit_error(self, tmp_path: Path) -> None:
+        """run_audit should wrap ValueError from compute_diffs into AuditError
+        so callers get a single error type."""
+        # Monkey-patch the engine's render step to emit a traversal dest —
+        # simulates a hostile pack without needing to author one on disk.
+        import navi_bootstrap.audit as audit_mod
+        from navi_bootstrap.audit import run_audit as _run_audit
+        from navi_bootstrap.diff import compute_diffs as _compute_diffs  # noqa: F401
+        from navi_bootstrap.engine import RenderedFile
+
+        spec = _write_spec(tmp_path)
+        target = tmp_path / "target"
+        target.mkdir()
+
+        def _hostile_render_to_files(*args, **kwargs):  # type: ignore[no-untyped-def]
+            return [RenderedFile(dest="../escape.txt", content="x", mode="create")]
+
+        original = audit_mod.render_to_files
+        audit_mod.render_to_files = _hostile_render_to_files
+        try:
+            with pytest.raises(AuditError, match="Path confinement error"):
+                _run_audit(spec, "scaffold", target, skip_resolve=True)
+        finally:
+            audit_mod.render_to_files = original
+
+
 # ---------------------------------------------------------------------------
 # CLI integration
 # ---------------------------------------------------------------------------
@@ -348,6 +394,32 @@ class TestAuditCli:
         )
         assert result.exit_code == 0
         assert "drift" in result.output.lower() or "missing" in result.output.lower()
+
+    def test_pipeline_error_exits_with_code_2(self, tmp_path: Path) -> None:
+        """AuditError must exit 2, not 1, so CI can tell drift apart from
+        pipeline failure. Never suppressed by --exit-zero."""
+        spec = _write_spec(tmp_path)
+        target = tmp_path / "target"
+        target.mkdir()
+        runner = CliRunner()
+        # Unknown pack triggers AuditError inside run_audit.
+        result = runner.invoke(
+            cli,
+            [
+                "audit",
+                "--spec",
+                str(spec),
+                "--pack",
+                "no-such-pack-exists",
+                "--target",
+                str(target),
+                "--exit-zero",  # must NOT suppress pipeline errors
+            ],
+        )
+        assert result.exit_code == 2, (
+            f"Expected exit 2 for pipeline error, got {result.exit_code}: "
+            f"stdout={result.output!r} stderr={getattr(result, 'stderr_bytes', b'')!r}"
+        )
 
     def test_output_file_written(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path)

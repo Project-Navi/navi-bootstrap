@@ -66,12 +66,34 @@ def compute_diffs(
 
     Returns a list of DiffResult for files that would change.
     Unchanged files are omitted.
+
+    Path confinement: every destination must resolve inside ``target``. A
+    crafted pack/spec with an absolute path, traversal (``..``), or a
+    symlink pointing outside the target is rejected with ``ValueError``.
+    This mirrors the write-side defense in ``engine.write_rendered`` — the
+    read boundary should be at least as strict as the write boundary.
     """
     results: list[DiffResult] = []
 
+    target_resolved = target.resolve()
+
     for rf in rendered_files:
         file_path = target / rf.dest
+
+        # Pre-existence confinement check: even for new files we must not
+        # follow a traversal or absolute path that would escape the target.
+        try:
+            file_path.resolve().relative_to(target_resolved)
+        except ValueError:
+            raise ValueError(f"Path escapes outside target directory: {rf.dest}") from None
+
         is_new = not file_path.exists()
+
+        # Post-existence symlink defense: a pre-existing symlink at
+        # file_path that points outside target would otherwise let a
+        # crafted pack read an arbitrary file during the diff.
+        if not is_new and file_path.resolve() != (target / rf.dest).resolve():
+            raise ValueError(f"Path escapes outside target directory (symlink): {rf.dest}")
 
         if is_new:
             # New file: diff against empty

@@ -103,7 +103,10 @@ Upload it in CI:
 |---|---|
 | 0 | Target fully conforms to the pack, OR drift found with `--exit-zero` |
 | 1 | Drift found without `--exit-zero` |
-| >1 | Pipeline error (bad spec, missing pack, template render failure) |
+| 2 | Pipeline error (bad spec, missing pack, path-confinement violation, template render failure). Always emitted to stderr, never suppressed by `--exit-zero` |
+
+Exit 1 vs 2 lets CI distinguish "the audit ran and reported drift" from "the
+audit failed to run". Wire your pipeline so only exit 1 gates the merge.
 
 ## Relationship to other verbs
 
