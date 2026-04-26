@@ -261,6 +261,31 @@ class TestRunAudit:
             f"path, got: {findings_by_path}"
         )
 
+    def test_plan_value_error_surfaces_as_audit_error(self, tmp_path: Path) -> None:
+        """run_audit must wrap ValueError from engine.plan() (e.g. loop
+        expansion exceeding _MAX_LOOP_ITEMS) as AuditError so audit_cmd's
+        exit-code-2 contract holds.
+
+        Regression guard for Codex P1 finding on PR #51: plan() can raise
+        ValueError but the original except only caught TemplateError/TypeError.
+        """
+        import navi_bootstrap.audit as audit_mod
+
+        spec = _write_spec(tmp_path)
+        target = tmp_path / "target"
+        target.mkdir()
+
+        def _hostile_plan(*args, **kwargs):  # type: ignore[no-untyped-def]
+            raise ValueError("Loop over 'spec.exploit' has 99999 items (max 1000)")
+
+        original = audit_mod.plan
+        audit_mod.plan = _hostile_plan
+        try:
+            with pytest.raises(AuditError, match="Template planning error"):
+                run_audit(spec, "scaffold", target, skip_resolve=True)
+        finally:
+            audit_mod.plan = original
+
 
 class TestAuditPathConfinement:
     """compute_diffs (via run_audit) must refuse to read outside the target.

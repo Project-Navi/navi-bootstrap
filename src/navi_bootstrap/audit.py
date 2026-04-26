@@ -117,14 +117,19 @@ def run_audit(
     except ResolveError as e:
         raise AuditError(str(e)) from e
 
-    # Stage 2 — plan.
+    # Stage 2 — plan. plan() can raise ValueError on _MAX_LOOP_ITEMS overflow
+    # in addition to Jinja2 TemplateError / TypeError; all three must surface
+    # as AuditError so audit_cmd's exit-code-2 contract holds (no raw
+    # tracebacks).
     templates_dir = pack_dir / "templates"
     try:
         render_plan = plan(manifest, spec_data, templates_dir)
-    except (jinja2.TemplateError, TypeError) as e:
+    except (jinja2.TemplateError, TypeError, ValueError) as e:
         raise AuditError(f"Template planning error: {e}") from e
 
-    # Stage 3 — render to memory (no filesystem writes).
+    # Stage 3 — render to memory (no filesystem writes). render_to_files can
+    # also raise ValueError (e.g. duplicate dest in create mode is enforced
+    # downstream but ValueError can leak up through Jinja extensions).
     try:
         rendered = render_to_files(
             render_plan,
@@ -133,7 +138,7 @@ def run_audit(
             action_shas=shas,
             action_versions=versions,
         )
-    except (jinja2.TemplateError, TypeError) as e:
+    except (jinja2.TemplateError, TypeError, ValueError) as e:
         raise AuditError(f"Template render error: {e}") from e
 
     # Use the manifest's canonical pack name (what `apply` writes into append
