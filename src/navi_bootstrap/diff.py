@@ -82,6 +82,16 @@ def compute_diffs(
 
         # Pre-existence confinement check: even for new files we must not
         # follow a traversal or absolute path that would escape the target.
+        # Path.resolve() follows the entire symlink chain, so this catches
+        # arbitrary-depth chained symlinks and relative-target symlinks
+        # alike — the resolved real path either lives under target_resolved
+        # or it doesn't.
+        #
+        # Threat-model caveat: this is a single-resolve TOCTOU snapshot. A
+        # process mutating the target between resolve() and any subsequent
+        # read can defeat it. See docs/reference/audit.md "Threat model and
+        # operational notes" — run audit on a fresh checkout or read-only
+        # mount when the target is exposed to untrusted writers.
         try:
             file_path.resolve().relative_to(target_resolved)
         except ValueError:

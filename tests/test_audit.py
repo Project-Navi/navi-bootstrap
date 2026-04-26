@@ -11,6 +11,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+import navi_bootstrap.audit as audit_mod
+import navi_bootstrap.cli as cli_mod
 from navi_bootstrap.audit import (
     AuditError,
     AuditFinding,
@@ -269,7 +271,6 @@ class TestRunAudit:
         Regression guard for Codex P1 finding on PR #51: plan() can raise
         ValueError but the original except only caught TemplateError/TypeError.
         """
-        import navi_bootstrap.audit as audit_mod
 
         spec = _write_spec(tmp_path)
         target = tmp_path / "target"
@@ -329,12 +330,57 @@ class TestAuditPathConfinement:
         with pytest.raises(ValueError, match="escapes outside target"):
             compute_diffs(rendered, target, pack_name="crafted")
 
+    def test_chained_symlink_escape_is_rejected(self, tmp_path: Path) -> None:
+        """Path.resolve() walks the entire symlink chain, so a multi-hop
+        link (target/a → target/b → outside/secret) must still be caught.
+
+        Regression guard for Grippy HIGH advisory on PR #51 ("retest with
+        chained and relative links").
+        """
+        from navi_bootstrap.diff import compute_diffs
+        from navi_bootstrap.engine import RenderedFile
+
+        secret_area = tmp_path / "outside"
+        secret_area.mkdir()
+        (secret_area / "secret.txt").write_text("leaked")
+
+        target = tmp_path / "target"
+        target.mkdir()
+        # Chain: a → b → outside/secret.txt
+        (target / "b").symlink_to(secret_area / "secret.txt")
+        (target / "a").symlink_to(target / "b")
+
+        rendered = [RenderedFile(dest="a", content="x", mode="create")]
+        with pytest.raises(ValueError, match="escapes outside target"):
+            compute_diffs(rendered, target, pack_name="crafted")
+
+    def test_relative_symlink_escape_is_rejected(self, tmp_path: Path) -> None:
+        """Relative-target symlinks (target/escape → ../outside/secret) must
+        also be caught — Path.resolve() handles relative resolution.
+
+        Regression guard for Grippy HIGH advisory on PR #51.
+        """
+        from navi_bootstrap.diff import compute_diffs
+        from navi_bootstrap.engine import RenderedFile
+
+        secret_area = tmp_path / "outside"
+        secret_area.mkdir()
+        (secret_area / "secret.txt").write_text("leaked")
+
+        target = tmp_path / "target"
+        target.mkdir()
+        # Relative symlink crossing out and back in is still an escape.
+        (target / "escape").symlink_to(Path("../outside/secret.txt"))
+
+        rendered = [RenderedFile(dest="escape", content="x", mode="create")]
+        with pytest.raises(ValueError, match="escapes outside target"):
+            compute_diffs(rendered, target, pack_name="crafted")
+
     def test_confinement_violation_surfaces_as_audit_error(self, tmp_path: Path) -> None:
         """run_audit should wrap ValueError from compute_diffs into AuditError
         so callers get a single error type."""
         # Monkey-patch the engine's render step to emit a traversal dest —
         # simulates a hostile pack without needing to author one on disk.
-        import navi_bootstrap.audit as audit_mod
         from navi_bootstrap.audit import run_audit as _run_audit
         from navi_bootstrap.diff import compute_diffs as _compute_diffs  # noqa: F401
         from navi_bootstrap.engine import RenderedFile
@@ -429,7 +475,6 @@ class TestAuditCli:
         # Build a symlink-escape target and monkey-patch the engine's render
         # step to emit a dest hitting it. Exercises the same boundary as audit
         # but via the `diff` CLI verb.
-        import navi_bootstrap.cli as cli_mod
         from navi_bootstrap.engine import RenderedFile
 
         secret_area = tmp_path / "outside"

@@ -39,8 +39,9 @@ AUDIT_RULES: tuple[dict[str, Any], ...] = (
         "fullDescription": {
             "text": (
                 "The target project is missing a file the conformance pack "
-                "would render. Run `nboot apply --pack <name> --target <path>` "
-                "to create it, or mark the pack as optional for this project."
+                "would render. Run `nboot apply --spec nboot-spec.json "
+                "--pack <name> --target <path>` to create it, or mark the "
+                "pack as optional for this project."
             ),
         },
         "helpUri": "https://github.com/Project-Navi/navi-bootstrap/blob/main/docs/reference/audit.md",
@@ -55,8 +56,9 @@ AUDIT_RULES: tuple[dict[str, Any], ...] = (
         "fullDescription": {
             "text": (
                 "The target project has a file whose content no longer matches "
-                "the conformance pack. Review `nboot diff --pack <name> --target <path>` "
-                "for the unified diff; `nboot apply` will overwrite (create mode) "
+                "the conformance pack. Review `nboot diff --spec nboot-spec.json "
+                "--pack <name> --target <path>` for the unified diff; "
+                "`nboot apply` (with the same flags) will overwrite (create mode) "
                 "or merge (append mode)."
             ),
         },
@@ -106,14 +108,26 @@ class SarifReport:
     tool_version: str
     results: list[SarifResult] = field(default_factory=list)
     rules: tuple[dict[str, Any], ...] = AUDIT_RULES
+    # Cache of valid rule ids for O(1) add_result validation. Populated lazily
+    # by add_result so the dataclass stays trivially constructible (e.g. tests
+    # that build a SarifReport without going through any factory). Never
+    # exposed in to_dict / to_json output.
+    _known_rule_ids: frozenset[str] | None = field(default=None, repr=False, compare=False)
 
     def add_result(self, result: SarifResult) -> None:
         # Defensive: reject results referencing unknown rules rather than emitting
-        # invalid SARIF that GitHub would silently drop.
-        known_ids = {rule["id"] for rule in self.rules}
-        if result.rule_id not in known_ids:
+        # invalid SARIF that GitHub would silently drop. The set is computed
+        # once and cached — audits with thousands of findings would otherwise
+        # rebuild it on every call.
+        if self._known_rule_ids is None:
+            object.__setattr__(
+                self, "_known_rule_ids", frozenset(rule["id"] for rule in self.rules)
+            )
+        assert self._known_rule_ids is not None  # narrows for mypy
+        if result.rule_id not in self._known_rule_ids:
             raise ValueError(
-                f"Unknown SARIF rule id {result.rule_id!r}; expected one of {sorted(known_ids)}"
+                f"Unknown SARIF rule id {result.rule_id!r}; "
+                f"expected one of {sorted(self._known_rule_ids)}"
             )
         self.results.append(result)
 
