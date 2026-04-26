@@ -151,4 +151,7 @@ class SarifReport:
         }
 
     def to_json(self, *, indent: int | None = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent, sort_keys=False)
+        # Trailing newline is part of the contract: callers (cli.py audit_cmd)
+        # expect every report-generator to terminate with '\n' so they can
+        # forward output verbatim without per-format newline handling.
+        return json.dumps(self.to_dict(), indent=indent, sort_keys=False) + "\n"

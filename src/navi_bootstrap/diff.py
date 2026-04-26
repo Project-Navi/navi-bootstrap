@@ -67,11 +67,24 @@ def compute_diffs(
     Returns a list of DiffResult for files that would change.
     Unchanged files are omitted.
 
-    Path confinement: every destination must resolve inside ``target``. A
-    crafted pack/spec with an absolute path, traversal (``..``), or a
-    symlink pointing outside the target is rejected with ``ValueError``.
-    This mirrors the write-side defense in ``engine.write_rendered`` — the
-    read boundary should be at least as strict as the write boundary.
+    Path confinement
+    ----------------
+    Every destination must resolve inside ``target``. A crafted pack/spec
+    with an absolute path, traversal (``..``), or a symlink pointing
+    outside the target is rejected with ``ValueError``. This mirrors the
+    write-side defense in ``engine.write_rendered`` — the read boundary
+    should be at least as strict as the write boundary.
+
+    .. warning::
+
+        The check is a single ``Path.resolve()`` snapshot. It catches
+        chained symlinks (``a -> b -> outside``) and relative-target
+        symlinks (``a -> ../outside/secret``), but it cannot defend
+        against another process mutating the target between the resolve
+        call and any subsequent read (TOCTOU). Run audit on a fresh
+        clone or read-only mount when the target is exposed to
+        untrusted writers. See ``docs/reference/audit.md`` —
+        "Threat model and operational notes".
     """
     results: list[DiffResult] = []
 

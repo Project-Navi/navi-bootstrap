@@ -11,8 +11,6 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-import navi_bootstrap.audit as audit_mod
-import navi_bootstrap.cli as cli_mod
 from navi_bootstrap.audit import (
     AuditError,
     AuditFinding,
@@ -85,6 +83,27 @@ class TestAuditFinding:
         r = f.to_sarif_result()
         assert r.rule_id == "pack-drift-missing"
         assert r.artifact_uri == "x/y.py"
+
+    def test_invalid_kind_rejected_at_construction(self) -> None:
+        """Grippy MEDIUM finding on PR #51: an unrecognised `kind` value
+        would have thrown a downstream KeyError when rule_id was accessed.
+        After the Literal + __post_init__ validation, construction itself
+        fails with a clear ValueError.
+        """
+        with pytest.raises(ValueError, match=r"Invalid AuditFinding\.kind"):
+            AuditFinding(kind="removed", dest="x", pack="p")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match=r"Invalid AuditFinding\.kind"):
+            AuditFinding(kind="", dest="x", pack="p")  # type: ignore[arg-type]
+
+    def test_message_includes_spec_flag_for_apply_remediation(self) -> None:
+        """The remediation hint must be a runnable command — `nboot apply`
+        and `nboot diff` both require --spec, so the message must include
+        it (Copilot finding on PR #51, paralleling the SARIF rule fix)."""
+        m = AuditFinding(kind="missing", dest="x", pack="base").message
+        assert "--spec nboot-spec.json" in m
+        assert "--pack base" in m
+        c = AuditFinding(kind="changed", dest="x", pack="base").message
+        assert "--spec nboot-spec.json" in c
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +282,9 @@ class TestRunAudit:
             f"path, got: {findings_by_path}"
         )
 
-    def test_plan_value_error_surfaces_as_audit_error(self, tmp_path: Path) -> None:
+    def test_plan_value_error_surfaces_as_audit_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """run_audit must wrap ValueError from engine.plan() (e.g. loop
         expansion exceeding _MAX_LOOP_ITEMS) as AuditError so audit_cmd's
         exit-code-2 contract holds.
@@ -279,13 +300,9 @@ class TestRunAudit:
         def _hostile_plan(*args, **kwargs):  # type: ignore[no-untyped-def]
             raise ValueError("Loop over 'spec.exploit' has 99999 items (max 1000)")
 
-        original = audit_mod.plan
-        audit_mod.plan = _hostile_plan
-        try:
-            with pytest.raises(AuditError, match="Template planning error"):
-                run_audit(spec, "scaffold", target, skip_resolve=True)
-        finally:
-            audit_mod.plan = original
+        monkeypatch.setattr("navi_bootstrap.audit.plan", _hostile_plan)
+        with pytest.raises(AuditError, match="Template planning error"):
+            run_audit(spec, "scaffold", target, skip_resolve=True)
 
 
 class TestAuditPathConfinement:
@@ -376,13 +393,13 @@ class TestAuditPathConfinement:
         with pytest.raises(ValueError, match="escapes outside target"):
             compute_diffs(rendered, target, pack_name="crafted")
 
-    def test_confinement_violation_surfaces_as_audit_error(self, tmp_path: Path) -> None:
+    def test_confinement_violation_surfaces_as_audit_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """run_audit should wrap ValueError from compute_diffs into AuditError
         so callers get a single error type."""
         # Monkey-patch the engine's render step to emit a traversal dest —
         # simulates a hostile pack without needing to author one on disk.
-        from navi_bootstrap.audit import run_audit as _run_audit
-        from navi_bootstrap.diff import compute_diffs as _compute_diffs  # noqa: F401
         from navi_bootstrap.engine import RenderedFile
 
         spec = _write_spec(tmp_path)
@@ -392,13 +409,9 @@ class TestAuditPathConfinement:
         def _hostile_render_to_files(*args, **kwargs):  # type: ignore[no-untyped-def]
             return [RenderedFile(dest="../escape.txt", content="x", mode="create")]
 
-        original = audit_mod.render_to_files
-        audit_mod.render_to_files = _hostile_render_to_files
-        try:
-            with pytest.raises(AuditError, match="Path confinement error"):
-                _run_audit(spec, "scaffold", target, skip_resolve=True)
-        finally:
-            audit_mod.render_to_files = original
+        monkeypatch.setattr("navi_bootstrap.audit.render_to_files", _hostile_render_to_files)
+        with pytest.raises(AuditError, match="Path confinement error"):
+            run_audit(spec, "scaffold", target, skip_resolve=True)
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +479,9 @@ class TestAuditCli:
         assert result.exit_code == 0
         assert "drift" in result.output.lower() or "missing" in result.output.lower()
 
-    def test_diff_cmd_friendly_error_on_confinement(self, tmp_path: Path) -> None:
+    def test_diff_cmd_friendly_error_on_confinement(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Regression: `nboot diff` must turn compute_diffs's path-confinement
         ValueError into a ClickException (one-line error), not a bare
         traceback. Codex stop-time review flagged 5fe1668 as introducing an
@@ -490,25 +505,21 @@ class TestAuditCli:
         def _hostile_render_to_files(*args, **kwargs):  # type: ignore[no-untyped-def]
             return [RenderedFile(dest="escape.txt", content="x", mode="create")]
 
-        original = cli_mod.render_to_files
-        cli_mod.render_to_files = _hostile_render_to_files
-        try:
-            runner = CliRunner()
-            result = runner.invoke(
-                cli,
-                [
-                    "diff",
-                    "--spec",
-                    str(spec),
-                    "--pack",
-                    "scaffold",
-                    "--target",
-                    str(target),
-                    "--skip-resolve",
-                ],
-            )
-        finally:
-            cli_mod.render_to_files = original
+        monkeypatch.setattr("navi_bootstrap.cli.render_to_files", _hostile_render_to_files)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "diff",
+                "--spec",
+                str(spec),
+                "--pack",
+                "scaffold",
+                "--target",
+                str(target),
+                "--skip-resolve",
+            ],
+        )
 
         # ClickException exits 1 with a clean 'Error: ...' line, no traceback.
         assert result.exit_code == 1

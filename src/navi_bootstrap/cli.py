@@ -434,7 +434,14 @@ def audit_cmd(
     github/codeql-action/upload-sarif.
 
     Exits 0 when the target fully conforms; exits 1 when drift is found
-    (override with --exit-zero for report-only CI surveys).
+    (override with --exit-zero for report-only CI surveys); exits 2 on
+    pipeline errors (bad spec, missing pack, path-confinement violation).
+
+    Threat model: audit's path-confinement check is a Path.resolve() snapshot
+    and does not defend against a hostile process mutating the target tree
+    mid-run (TOCTOU). Run on a freshly cloned working tree or read-only mount
+    when --target may be exposed to untrusted writers. See
+    docs/reference/audit.md for the full threat model.
     """
     # Offline by default — conformance audits shouldn't depend on network.
     skip_resolve = not resolve
@@ -457,10 +464,13 @@ def audit_cmd(
     else:
         rendered = findings_to_text(findings)
 
+    # Centralised contract: report generators always return a trailing-newline
+    # terminated string (findings_to_text already does; SarifReport.to_json
+    # appends one). The CLI just forwards verbatim.
     if output is None:
-        click.echo(rendered)
+        click.echo(rendered, nl=False)
     else:
-        output.write_text(rendered if rendered.endswith("\n") else rendered + "\n")
+        output.write_text(rendered)
         click.echo(f"Wrote {len(findings)} finding(s) to {output}", err=True)
 
     if findings and not exit_zero:

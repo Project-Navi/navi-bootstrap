@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import jinja2
 
@@ -35,31 +36,53 @@ class AuditError(Exception):
     """Raised for any failure inside run_audit before findings can be produced."""
 
 
+FindingKind = Literal["missing", "changed"]
+_FINDING_KINDS: tuple[FindingKind, ...] = ("missing", "changed")
+_RULE_ID_BY_KIND: dict[FindingKind, str] = {
+    "missing": "pack-drift-missing",
+    "changed": "pack-drift-changed",
+}
+
+
 @dataclass(frozen=True)
 class AuditFinding:
     """One audit finding — a file that's missing or drifted vs the pack.
 
-    The `kind` field maps 1:1 to SARIF rule ids in sarif.py.
+    The `kind` field maps 1:1 to SARIF rule ids in sarif.py. Only the values
+    listed in :data:`FindingKind` are accepted; constructing with anything
+    else raises ``ValueError`` so a typo can't silently produce invalid
+    SARIF downstream.
     """
 
-    kind: str  # "missing" | "changed"
+    kind: FindingKind
     dest: str  # path relative to target repo
     pack: str
 
+    def __post_init__(self) -> None:
+        if self.kind not in _FINDING_KINDS:
+            raise ValueError(
+                f"Invalid AuditFinding.kind {self.kind!r}; expected one of {list(_FINDING_KINDS)}"
+            )
+
     @property
     def rule_id(self) -> str:
-        return {"missing": "pack-drift-missing", "changed": "pack-drift-changed"}[self.kind]
+        return _RULE_ID_BY_KIND[self.kind]
 
     @property
     def message(self) -> str:
+        # Suggested commands include --spec because both `apply` and `diff`
+        # require it; omitting it would print a Click usage error to anyone
+        # who copy-pastes the suggestion.
         if self.kind == "missing":
             return (
                 f"File '{self.dest}' is missing; pack '{self.pack}' would "
-                f"create it. Run `nboot apply --pack {self.pack}` to remediate."
+                f"create it. Run `nboot apply --spec nboot-spec.json --pack "
+                f"{self.pack} --target <path>` to remediate."
             )
         return (
             f"File '{self.dest}' differs from pack '{self.pack}'. "
-            f"Run `nboot diff --pack {self.pack}` to review the drift."
+            f"Run `nboot diff --spec nboot-spec.json --pack {self.pack} "
+            f"--target <path>` to review the drift."
         )
 
     def to_sarif_result(self) -> SarifResult:
@@ -71,11 +94,8 @@ class AuditFinding:
 
 
 def _diff_result_to_finding(diff: DiffResult, pack: str) -> AuditFinding:
-    return AuditFinding(
-        kind="missing" if diff.is_new else "changed",
-        dest=diff.dest,
-        pack=pack,
-    )
+    kind: FindingKind = "missing" if diff.is_new else "changed"
+    return AuditFinding(kind=kind, dest=diff.dest, pack=pack)
 
 
 def run_audit(
