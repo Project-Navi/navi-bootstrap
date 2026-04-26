@@ -166,7 +166,14 @@ jobs:
         run: uv run bandit -r src/navi_bootstrap -ll
 
       - name: Audit dependencies (pip-audit)
-        run: uvx pip-audit==2.9.0
+        # Scope the audit to OUR locked dependency tree exported from uv,
+        # not the transient uvx environment. Otherwise pip-audit also scans
+        # its own runtime (which currently flags the runner's pip 26.0.1
+        # for GHSA-58qw-9mgm-455v / CVE-2026-3219, an unpatched pip CVE
+        # that has nothing to do with this project's dependencies).
+        run: |
+          uv export --format requirements.txt --no-emit-project --no-hashes             > /tmp/audit-deps.txt 2>/dev/null
+          uvx pip-audit==2.9.0 -r /tmp/audit-deps.txt
 
   # ── Required check: quality-gate ────────────────────────────────────
   # CONTRACT: org ruleset requires this exact check name
