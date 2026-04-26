@@ -126,7 +126,8 @@ def render_cmd(
         ):
             raise click.ClickException(
                 f"Unsafe spec name {name!r} cannot be used as output directory. "
-                "Name must be a non-empty single path segment without '.' or '..' components. "
+                "Name must be a non-empty single path segment, must not start with "
+                "'.', and must not contain '..' or path separators. "
                 "Use --out to specify an explicit output path."
             )
         output_dir = Path(stripped_name)
