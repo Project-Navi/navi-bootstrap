@@ -97,6 +97,31 @@ Upload it in CI:
     category: nboot-audit
 ```
 
+## Threat model and operational notes
+
+`nboot audit` is a **defence-in-depth** tool, not a hardened sandbox. The
+path-confinement check in `compute_diffs` resolves every destination
+relative to the target directory and rejects traversal, absolute paths,
+and symlink escapes — but it operates at the moment the audit runs.
+
+Known limits:
+
+- **TOCTOU.** The check resolves paths once; in a shared or mutable
+  environment a path may flip from safe to unsafe between the check
+  and any subsequent read. For audits that matter (CI gates, fleet
+  surveys), run against a freshly-cloned working tree or a read-only
+  mount.
+- **Chained symlinks created mid-run.** If another process creates new
+  symlinks under `--target` while audit is iterating, files added after
+  the resolve check are not re-confined. Same mitigation: avoid running
+  audit on a directory another process is actively writing to.
+- **Privilege.** Run audit with the lowest privilege that can read the
+  target. Don't run as root unless the target requires it.
+
+For most CI usage — clone, audit, exit — these limits don't apply. They
+only matter if the audit is exposed to an attacker who can mutate the
+target while audit is running.
+
 ## Exit codes
 
 | Exit | Meaning |
