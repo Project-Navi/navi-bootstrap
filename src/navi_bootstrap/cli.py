@@ -468,7 +468,13 @@ def new(
     """Create a new Python project with operational infrastructure."""
     # Validate name before using as path
     stripped_name = name.strip() if name else ""
-    if not stripped_name or "/" in stripped_name or "\\" in stripped_name or ".." in stripped_name or stripped_name.startswith("."):
+    if (
+        not stripped_name
+        or "/" in stripped_name
+        or "\\" in stripped_name
+        or ".." in stripped_name
+        or stripped_name.startswith(".")
+    ):
         raise click.ClickException(
             f"Unsafe project name {name!r}. "
             "Names must not contain path separators, '..', or start with a dot."
