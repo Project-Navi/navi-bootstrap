@@ -193,10 +193,13 @@ def findings_to_sarif(
 def findings_to_text(findings: list[AuditFinding]) -> str:
     """Human-readable audit summary.
 
-    Used by `nboot audit` when ``--format text`` (the default).
+    Used by `nboot audit` when ``--format text`` (the default). Always
+    returns a string with a trailing newline so the caller (audit_cmd)
+    can forward verbatim without per-format newline handling — both the
+    empty-findings path and the multi-line summary respect this contract.
     """
     if not findings:
-        return "OK — target conforms to the pack."
+        return "OK — target conforms to the pack.\n"
 
     lines: list[str] = [
         f"Audit found {len(findings)} drift finding(s):",

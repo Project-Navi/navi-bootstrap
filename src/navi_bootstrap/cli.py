@@ -457,6 +457,18 @@ def audit_cmd(
         # --exit-zero since pipeline errors must always be visible.
         click.echo(f"Audit pipeline error: {e}", err=True)
         raise SystemExit(2) from e
+    except Exception as e:  # pragma: no cover - defence in depth
+        # Defence in depth (Grippy MEDIUM): if a stage starts raising a
+        # new exception class run_audit hasn't been taught to wrap as
+        # AuditError, surface a clean error rather than letting a raw
+        # traceback leak. Still exit 2 so CI sees pipeline failure.
+        click.echo(f"Audit internal error: {type(e).__name__}: {e}", err=True)
+        click.echo(
+            "  This is likely a bug — please file at "
+            "https://github.com/Project-Navi/navi-bootstrap/issues",
+            err=True,
+        )
+        raise SystemExit(2) from e
 
     if output_format == "sarif":
         report = findings_to_sarif(findings, tool_name="nboot-audit", tool_version=__version__)
