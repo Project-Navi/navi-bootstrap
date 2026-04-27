@@ -66,11 +66,50 @@ def compute_diffs(
 
     Returns a list of DiffResult for files that would change.
     Unchanged files are omitted.
+
+    Path confinement
+    ----------------
+    Every destination must resolve inside ``target``. A crafted pack/spec
+    with an absolute path, traversal (``..``), or a symlink pointing
+    outside the target is rejected with ``ValueError``. This mirrors the
+    write-side defense in ``engine.write_rendered`` — the read boundary
+    should be at least as strict as the write boundary.
+
+    .. warning::
+
+        The check is a single ``Path.resolve()`` snapshot. It catches
+        chained symlinks (``a -> b -> outside``) and relative-target
+        symlinks (``a -> ../outside/secret``), but it cannot defend
+        against another process mutating the target between the resolve
+        call and any subsequent read (TOCTOU). Run audit on a fresh
+        clone or read-only mount when the target is exposed to
+        untrusted writers. See ``docs/reference/audit.md`` —
+        "Threat model and operational notes".
     """
     results: list[DiffResult] = []
 
+    target_resolved = target.resolve()
+
     for rf in rendered_files:
         file_path = target / rf.dest
+
+        # Pre-existence confinement check: even for new files we must not
+        # follow a traversal or absolute path that would escape the target.
+        # Path.resolve() follows the entire symlink chain, so this catches
+        # arbitrary-depth chained symlinks and relative-target symlinks
+        # alike — the resolved real path either lives under target_resolved
+        # or it doesn't.
+        #
+        # Threat-model caveat: this is a single-resolve TOCTOU snapshot. A
+        # process mutating the target between resolve() and any subsequent
+        # read can defeat it. See docs/reference/audit.md "Threat model and
+        # operational notes" — run audit on a fresh checkout or read-only
+        # mount when the target is exposed to untrusted writers.
+        try:
+            file_path.resolve().relative_to(target_resolved)
+        except ValueError:
+            raise ValueError(f"Path escapes outside target directory: {rf.dest}") from None
+
         is_new = not file_path.exists()
 
         if is_new:
