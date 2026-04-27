@@ -14,6 +14,8 @@ from typing import Any
 import click
 import jinja2
 
+from navi_bootstrap import __version__
+from navi_bootstrap.audit import AuditError, findings_to_sarif, findings_to_text, run_audit
 from navi_bootstrap.diff import compute_diffs
 from navi_bootstrap.engine import plan, render, render_to_files
 from navi_bootstrap.hooks import run_hooks
@@ -28,7 +30,8 @@ from navi_bootstrap.validate import run_validations
 _GH_NOTICE = (
     "Notice: gh CLI not found — SHA resolution requires gh "
     "(https://cli.github.com).\n"
-    "  Action SHAs left as placeholders. Re-run without --skip-resolve after installing gh."
+    "  Continuing with placeholder action SHAs. Install gh to enable "
+    "full SHA resolution."
 )
 
 
@@ -354,8 +357,13 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
     except (jinja2.TemplateError, TypeError) as e:
         raise click.ClickException(f"Template error: {e}") from e
 
-    # Compute diffs
-    diffs = compute_diffs(rendered_files, target, pack_name=render_plan.pack_name)
+    # Compute diffs — path-confinement violations surface as ValueError from
+    # compute_diffs; convert to a clean ClickException so users see a one-line
+    # error instead of a Python traceback on crafted / symlinked targets.
+    try:
+        diffs = compute_diffs(rendered_files, target, pack_name=render_plan.pack_name)
+    except ValueError as e:
+        raise click.ClickException(f"Path confinement error: {e}") from e
 
     if not diffs:
         click.echo("No changes — target is up to date.")
@@ -369,6 +377,116 @@ def diff_cmd(spec: Path, pack: str, target: Path, skip_resolve: bool) -> None:
     n = len(diffs)
     click.echo(f"\n{n} file{'s' if n != 1 else ''} would change.")
     raise SystemExit(1)
+
+
+@cli.command("audit")
+@click.option(
+    "--spec",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the project spec JSON file",
+)
+@click.option("--pack", required=True, type=str, help="Name of the conformance pack")
+@click.option(
+    "--target",
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Project directory to audit against the pack",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "sarif"]),
+    default="text",
+    help="Report format (text for humans, sarif for GitHub Security tab)",
+)
+@click.option(
+    "--output",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Write report to this file instead of stdout",
+)
+@click.option(
+    "--resolve",
+    is_flag=True,
+    default=False,
+    help="Resolve action SHAs via gh before planning (default: offline)",
+)
+@click.option(
+    "--exit-zero",
+    is_flag=True,
+    default=False,
+    help="Exit 0 even when drift is found (report-only mode for CI surveys)",
+)
+def audit_cmd(
+    spec: Path,
+    pack: str,
+    target: Path,
+    output_format: str,
+    output: Path | None,
+    resolve: bool,
+    exit_zero: bool,
+) -> None:
+    """Audit a project against a pack for conformance drift.
+
+    Reports files that are missing or drifted relative to what the pack would
+    render. Supports --format=sarif for upload to GitHub's Security tab via
+    github/codeql-action/upload-sarif.
+
+    Exits 0 when the target fully conforms; exits 1 when drift is found
+    (override with --exit-zero for report-only CI surveys); exits 2 on
+    pipeline errors (bad spec, missing pack, path-confinement violation).
+
+    Threat model: audit's path-confinement check is a Path.resolve() snapshot
+    and does not defend against a hostile process mutating the target tree
+    mid-run (TOCTOU). Run on a freshly cloned working tree or read-only mount
+    when --target may be exposed to untrusted writers. See
+    docs/reference/audit.md for the full threat model.
+    """
+    # Offline by default — conformance audits shouldn't depend on network.
+    skip_resolve = not resolve
+    if resolve and not gh_available():
+        click.echo(_GH_NOTICE, err=True)
+        skip_resolve = True
+
+    try:
+        findings = run_audit(spec, pack, target, skip_resolve=skip_resolve)
+    except AuditError as e:
+        # Exit 2 (distinct from drift=1) so CI can tell "audit ran; drift
+        # found" apart from "audit failed to run". Never suppressed by
+        # --exit-zero since pipeline errors must always be visible.
+        click.echo(f"Audit pipeline error: {e}", err=True)
+        raise SystemExit(2) from e
+    except Exception as e:  # pragma: no cover - defence in depth
+        # Defence in depth (Grippy MEDIUM): if a stage starts raising a
+        # new exception class run_audit hasn't been taught to wrap as
+        # AuditError, surface a clean error rather than letting a raw
+        # traceback leak. Still exit 2 so CI sees pipeline failure.
+        click.echo(f"Audit internal error: {type(e).__name__}: {e}", err=True)
+        click.echo(
+            "  This is likely a bug — please file at "
+            "https://github.com/Project-Navi/navi-bootstrap/issues",
+            err=True,
+        )
+        raise SystemExit(2) from e
+
+    if output_format == "sarif":
+        report = findings_to_sarif(findings, tool_name="nboot-audit", tool_version=__version__)
+        rendered = report.to_json()
+    else:
+        rendered = findings_to_text(findings)
+
+    # Centralised contract: report generators always return a trailing-newline
+    # terminated string (findings_to_text already does; SarifReport.to_json
+    # appends one). The CLI just forwards verbatim.
+    if output is None:
+        click.echo(rendered, nl=False)
+    else:
+        output.write_text(rendered)
+        click.echo(f"Wrote {len(findings)} finding(s) to {output}", err=True)
+
+    if findings and not exit_zero:
+        raise SystemExit(1)
 
 
 @cli.command("list-packs")
