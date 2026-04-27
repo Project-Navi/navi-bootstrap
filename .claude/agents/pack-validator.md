@@ -14,25 +14,27 @@ You are a pack-validation specialist for navi-bootstrap. Your job: confirm that 
    git diff --name-only origin/main...HEAD | grep '^packs/' | cut -d'/' -f2 | sort -u
    ```
 
-2. For each changed pack, run the full validation chain:
+2. For each changed pack, run the full validation chain **including** its
+   pack-specific tests inside the same loop body — otherwise `pack_snake`
+   takes the value of the last iteration only and earlier packs' tests are
+   silently skipped:
 
    ```bash
-   uv run nboot validate --spec nboot-spec.json
-   scratch=$(mktemp -d -t nboot-scratch-XXXX)
-   uv run nboot new "$scratch"
-   uv run nboot apply --spec nboot-spec.json --pack <PACK> --target "$scratch"
-   uv run nboot diff  --spec nboot-spec.json --pack <PACK> --target "$scratch"
+   for PACK in $(git diff --name-only origin/main...HEAD | grep '^packs/' | cut -d'/' -f2 | sort -u); do
+     uv run nboot validate --spec nboot-spec.json
+     scratch=$(mktemp -d -t nboot-scratch-XXXX)
+     uv run nboot new "$scratch"
+     uv run nboot apply --spec nboot-spec.json --pack "$PACK" --target "$scratch"
+     uv run nboot diff  --spec nboot-spec.json --pack "$PACK" --target "$scratch"
+
+     # Pack-specific test for this iteration's pack
+     pack_snake=$(echo "$PACK" | tr '-' '_')
+     uv run pytest tests/test_${pack_snake}_pack.py -v || \
+       uv run pytest tests/ -k "$pack_snake" -v
+   done
    ```
 
-3. Run the pack-specific test:
-
-   ```bash
-   pack_snake=$(echo <PACK> | tr '-' '_')
-   uv run pytest tests/test_${pack_snake}_pack.py -v 2>/dev/null || \
-     uv run pytest tests/ -k "$pack_snake" -v
-   ```
-
-4. Run cross-cutting tests that commonly break on pack changes:
+3. Run cross-cutting tests that commonly break on pack changes:
 
    ```bash
    uv run pytest tests/test_engine.py tests/test_manifest.py tests/test_integration.py -v
